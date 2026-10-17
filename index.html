@@ -1,0 +1,2709 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>环球大富翁</title>
+<meta name="description" content="和朋友在线玩的世界城市大富翁。开个房间，把链接发给朋友，打开就能入座，不用注册。">
+<meta property="og:title" content="环球大富翁">
+<meta property="og:description" content="开个房间，把链接发给朋友，一起环游世界买地盖房。不用注册。">
+<meta name="theme-color" content="#1F4F9E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='6' fill='%23D3283A'/%3E%3Ccircle cx='10.5' cy='10.5' r='2.6' fill='white'/%3E%3Ccircle cx='16' cy='16' r='2.6' fill='white'/%3E%3Ccircle cx='21.5' cy='21.5' r='2.6' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=ZCOOL+QingKe+HuangYou&display=swap" media="print" onload="this.media='all'">
+<style>
+/* 布局：航空信封红蓝斜纹框住的棋盘是主角；宽屏时右侧是登机牌式的玩家栏，窄屏时依次排在棋盘下方 */
+:root {
+  color-scheme: light;
+  --paper: #EDF1F7;
+  --surface: #FFFFFF;
+  --surface-2: #E3E9F3;
+  --surface-3: #F5F7FB;
+  --ink: #141E36;
+  --ink-2: #55617D;
+  --ink-3: #8792AB;
+  --line: #CAD2E0;
+  --air-red: #D3283A;
+  --air-blue: #1F4F9E;
+  --gap-paper: #FFFFFF;
+  --on-color: #FFFFFF;
+  --good: #17784D;
+  --warn: #A86300;
+  --bad: #BF2630;
+  --focus: #1F4F9E;
+  --hatch: rgba(20, 30, 54, .17);
+  --dot: rgba(20, 30, 54, .07);
+  --shade: rgba(20, 30, 54, .22);
+  --scrim: rgba(12, 18, 32, .48);
+  --g1: #21968A; --g2: #D8603A; --g3: #7254C4; --g4: #C63A67;
+  --g5: #A0760B; --g6: #2B80C2; --g7: #3D8737; --g8: #2A3876;
+  --p1: #E8542F; --p2: #2C8BD6; --p3: #D99412; --p4: #2B9B63; --p5: #9054CF; --p6: #DB4C90;
+  --f-display: "ZCOOL QingKe HuangYou", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --f-body: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --f-num: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0B1120; --surface: #141C30; --surface-2: #1A2440; --surface-3: #18213A;
+    --ink: #E5EAF4; --ink-2: #9EA9C3; --ink-3: #6B7694; --line: #2A3657;
+    --air-red: #FF5D6D; --air-blue: #7FA6FF; --gap-paper: #141C30;
+    --good: #4CC28B; --warn: #F2A93B; --bad: #FF6B72; --focus: #7FA6FF;
+    --hatch: rgba(229, 234, 244, .15); --dot: rgba(229, 234, 244, .05);
+    --shade: rgba(0, 0, 0, .5); --scrim: rgba(0, 0, 0, .62);
+    --g8: #4255B0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0B1120; --surface: #141C30; --surface-2: #1A2440; --surface-3: #18213A;
+  --ink: #E5EAF4; --ink-2: #9EA9C3; --ink-3: #6B7694; --line: #2A3657;
+  --air-red: #FF5D6D; --air-blue: #7FA6FF; --gap-paper: #141C30;
+  --good: #4CC28B; --warn: #F2A93B; --bad: #FF6B72; --focus: #7FA6FF;
+  --hatch: rgba(229, 234, 244, .15); --dot: rgba(229, 234, 244, .05);
+  --shade: rgba(0, 0, 0, .5); --scrim: rgba(0, 0, 0, .62);
+  --g8: #4255B0;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { background: var(--paper); }
+body { color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.shell {
+  max-width: 1280px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 40px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+/* ---------- 顶栏 ---------- */
+.topbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; }
+.brand { display: flex; align-items: center; gap: 12px; margin-right: auto; min-width: 0; }
+.brand h1 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: 30px; line-height: 1; letter-spacing: .02em; }
+.brand h1 span { color: var(--air-red); }
+.airmail {
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  font: 700 11px/1 var(--f-num); letter-spacing: .14em; color: var(--air-blue);
+  border: 1.5px solid currentColor; border-radius: 3px; padding: 3px 7px; transform: rotate(-3deg);
+}
+.airmail b { font-family: var(--f-body); font-weight: 700; letter-spacing: .04em; color: var(--air-red); }
+.conn { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-2); }
+.conn i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); flex: none; }
+.conn.ok i { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent); }
+.conn.warn i { background: var(--warn); }
+.tools { display: flex; gap: 8px; }
+.tbtn {
+  appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 8px;
+  padding: 6px 12px; font-size: 13px; font-weight: 500; cursor: pointer; min-height: 34px;
+}
+.tbtn:hover { border-color: var(--ink-3); }
+
+.notice {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--surface); border: 1px dashed var(--ink-3); border-radius: 10px;
+  padding: 10px 14px; font-size: 13px; color: var(--ink-2);
+}
+.notice b { color: var(--ink); font-weight: 600; flex: none; }
+
+/* ---------- 主体布局 ---------- */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (min-width: 980px) { .layout { grid-template-columns: minmax(0, 1fr) 360px; } }
+.board-col { min-width: 0; }
+
+/* ---------- 棋盘 ---------- */
+.board {
+  position: relative; width: 100%; max-width: 780px; margin: 0 auto; aspect-ratio: 1 / 1;
+  padding: clamp(5px, 1.3vw, 10px); border-radius: 6px;
+  background: repeating-linear-gradient(-45deg, var(--air-red) 0 14px, var(--gap-paper) 14px 22px, var(--air-blue) 22px 36px, var(--gap-paper) 36px 44px);
+  box-shadow: 0 22px 44px -26px var(--shade);
+}
+.grid {
+  position: relative; width: 100%; height: 100%;
+  display: grid; gap: 1px; background: var(--line); border-radius: 2px; overflow: hidden;
+  grid-template-columns: 1.42fr repeat(7, 1fr) 1.42fr;
+  grid-template-rows: 1.42fr repeat(7, 1fr) 1.42fr;
+  container-type: inline-size; container-name: board;
+}
+.cell {
+  position: relative; display: flex; min-width: 0; min-height: 0; overflow: hidden;
+  background: var(--surface); cursor: pointer; outline: none;
+}
+.cell:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); z-index: 2; }
+.cell:hover .nm { text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 2px; }
+.cell.b { flex-direction: column; }
+.cell.t { flex-direction: column-reverse; }
+.cell.l { flex-direction: row-reverse; }
+.cell.r { flex-direction: row; }
+.band {
+  flex: none; display: flex; align-items: center; justify-content: center; gap: 2px; overflow: hidden;
+  background: var(--gc, var(--ink-2)); color: var(--on-color);
+}
+.cell.b .band, .cell.t .band { height: 27%; }
+.cell.l .band, .cell.r .band { width: 19%; flex-direction: column; }
+.band.rail { --gc: var(--air-blue); }
+.band.util { --gc: var(--ink-2); }
+.code { font: 600 clamp(7px, 2.1cqi, 12px)/1 var(--f-num); letter-spacing: .08em; }
+.cell.l .band .code, .cell.r .band .code, .band.has-h .code { display: none; }
+.pips { display: flex; gap: clamp(1px, .4cqi, 3px); align-items: center; }
+.cell.l .pips, .cell.r .pips { flex-direction: column; }
+.pip { width: clamp(3px, .95cqi, 7px); height: clamp(3px, .95cqi, 7px); background: var(--on-color); border-radius: 1px; }
+.pip.hotel { width: clamp(8px, 2.6cqi, 18px); height: clamp(4px, 1.2cqi, 8px); }
+.cell.l .pip.hotel, .cell.r .pip.hotel { width: clamp(4px, 1.2cqi, 8px); height: clamp(8px, 2.6cqi, 18px); }
+.body {
+  flex: 1; min-width: 0; min-height: 0; padding: 1px 2px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15em; text-align: center;
+}
+.nm { font-size: clamp(9px, 2.7cqi, 15px); font-weight: 500; line-height: 1.12; white-space: nowrap; }
+.pr { font: 500 clamp(8px, 2.3cqi, 13px)/1 var(--f-num); color: var(--ink-2); letter-spacing: .03em; font-variant-numeric: tabular-nums; }
+.code2 { font: 600 clamp(7px, 1.95cqi, 11px)/1 var(--f-num); letter-spacing: .09em; color: var(--ink-3); }
+.cell.b .code2, .cell.t .code2 { display: none; }
+.cell .code2.always { display: block; }
+.short { display: none; }
+@container board (max-width: 520px) { .full { display: none; } .short { display: inline; } }
+.glyph { font: 400 clamp(16px, 5.4cqi, 32px)/1 var(--f-display); }
+.glyph.red { color: var(--air-red); }
+.glyph.blue { color: var(--air-blue); }
+
+.cell[data-own]::after { content: ""; position: absolute; background: var(--oc); pointer-events: none; }
+.cell.b[data-own]::after { left: 0; right: 0; bottom: 0; height: clamp(3px, .9cqi, 6px); }
+.cell.t[data-own]::after { left: 0; right: 0; top: 0; height: clamp(3px, .9cqi, 6px); }
+.cell.l[data-own]::after { top: 0; bottom: 0; left: 0; width: clamp(3px, .9cqi, 6px); }
+.cell.r[data-own]::after { top: 0; bottom: 0; right: 0; width: clamp(3px, .9cqi, 6px); }
+.cell.mort { background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--hatch) 4px 5px); }
+.cell.mort .body { opacity: .5; }
+.cell.offer { box-shadow: inset 0 0 0 2px var(--air-red); z-index: 1; }
+.cell.flash { animation: flash .9s ease-out; }
+@keyframes flash { 0% { box-shadow: inset 0 0 0 3px var(--air-blue); } 100% { box-shadow: inset 0 0 0 0 var(--air-blue); } }
+
+/* 四个角 */
+.corner { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3em; padding: 4px; text-align: center; }
+.corner .nm { font-size: clamp(10px, 3cqi, 17px); font-weight: 700; }
+.corner .sub { font-size: clamp(7.5px, 1.95cqi, 11px); line-height: 1.2; color: var(--ink-2); }
+.stamp {
+  font: 400 clamp(11px, 3.9cqi, 26px)/1 var(--f-display); padding: .18em .35em .12em; white-space: nowrap;
+  border: 2px solid currentColor; border-radius: 4px;
+}
+@container board (max-width: 520px) {
+  .park .sub, .jail .sub, .gojail .sub, .go .arrow { display: none; }
+  .corner { gap: .2em; padding: 2px; }
+}
+.stamp.blue { color: var(--air-blue); transform: rotate(-6deg); }
+.stamp.red { color: var(--air-red); transform: rotate(7deg); }
+.go .arrow { font: 700 clamp(12px, 3.6cqi, 22px)/1 var(--f-num); color: var(--air-red); }
+.jail .bars {
+  width: 56%; height: 34%; border: 2px solid var(--ink-2); border-radius: 3px;
+  background: repeating-linear-gradient(90deg, var(--ink-2) 0 2px, transparent 2px clamp(5px, 1.6cqi, 9px));
+}
+.park .pot { font: 700 clamp(13px, 3.8cqi, 24px)/1 var(--f-num); color: var(--good); font-variant-numeric: tabular-nums; }
+
+/* 中央 */
+.center {
+  grid-row: 2 / 9; grid-column: 2 / 9; position: relative; min-width: 0; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(5px, 1.7cqi, 14px);
+  padding: clamp(8px, 3cqi, 28px); text-align: center;
+  background-color: var(--surface-2);
+  background-image: radial-gradient(var(--dot) 1.1px, transparent 1.4px);
+  background-size: 14px 14px;
+}
+.c-logo { font: 400 clamp(20px, 7.4cqi, 50px)/1 var(--f-display); letter-spacing: .02em; }
+.c-logo span { color: var(--air-red); }
+@container board (max-width: 430px) { .c-logo { display: none; } }
+.c-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: clamp(10px, 2.3cqi, 13px); color: var(--ink-2); }
+.c-meta b { font: 600 1.15em/1 var(--f-num); color: var(--ink); font-variant-numeric: tabular-nums; }
+.c-main { display: flex; flex-direction: column; align-items: center; gap: clamp(4px, 1.4cqi, 10px); width: 100%; min-width: 0; }
+.c-big { font: 400 clamp(22px, 7cqi, 44px)/1 var(--f-display); }
+.c-sub, .c-wait { margin: 0; font-size: clamp(11px, 2.6cqi, 14px); color: var(--ink-2); }
+.c-seats { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.chip-tok {
+  width: clamp(24px, 6.5cqi, 38px); height: clamp(24px, 6.5cqi, 38px); border-radius: 50%;
+  display: grid; place-items: center; font-size: clamp(13px, 3.8cqi, 22px);
+  background: var(--surface); box-shadow: 0 0 0 2px var(--pc);
+}
+
+.pass {
+  width: min(100%, 380px); display: grid; grid-template-columns: auto minmax(0, 1fr); text-align: left;
+  background: var(--surface); border-radius: 8px; overflow: hidden; box-shadow: 0 8px 20px -12px var(--shade);
+}
+.pass-stub { background: var(--pc); display: grid; place-items: center; padding: clamp(6px, 1.8cqi, 12px); }
+.pass-tok {
+  width: clamp(28px, 8cqi, 48px); height: clamp(28px, 8cqi, 48px); border-radius: 50%;
+  display: grid; place-items: center; background: var(--surface); font-size: clamp(16px, 4.6cqi, 28px);
+}
+.pass-main { min-width: 0; padding: clamp(5px, 1.5cqi, 10px) clamp(8px, 2.2cqi, 14px); border-left: 2px dashed var(--line); display: grid; gap: 2px; }
+.pass-label { font-size: clamp(9px, 2.1cqi, 12px); color: var(--ink-3); letter-spacing: .06em; }
+.pass-label.me { color: var(--air-red); font-weight: 700; }
+.pass-name { display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 700; font-size: clamp(12px, 3.1cqi, 18px); line-height: 1.2; }
+.pass-name > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pass-row { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.pass-cash { font: 600 clamp(14px, 3.6cqi, 22px)/1 var(--f-num); font-variant-numeric: tabular-nums; }
+.pass-status { font-size: clamp(10px, 2.4cqi, 13px); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ticker {
+  max-width: 100%; font-size: clamp(10px, 2.4cqi, 13px); color: var(--ink-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.dice { display: flex; gap: clamp(6px, 2cqi, 14px); }
+.die {
+  width: clamp(28px, 8.6cqi, 54px); height: clamp(28px, 8.6cqi, 54px); padding: 13%;
+  display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  background: var(--surface); border-radius: 18%;
+  box-shadow: inset 0 -2px 0 var(--line), 0 4px 10px -6px var(--shade);
+}
+.die i { border-radius: 50%; margin: 13%; background: var(--ink); visibility: hidden; }
+.die i.on { visibility: visible; }
+.die.red i.on { background: var(--air-red); }
+.dice.rolling .die { animation: tumble .28s linear infinite; }
+.dice.rolling .die:nth-child(2) { animation-direction: reverse; }
+@keyframes tumble { 0% { transform: rotate(0) translateY(0); } 50% { transform: rotate(14deg) translateY(-3px); } 100% { transform: rotate(0) translateY(0); } }
+
+.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(5px, 1.5cqi, 10px); min-height: 2px; }
+.btn {
+  appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap;
+}
+.btn:hover:not(:disabled) { border-color: var(--ink-3); }
+.btn.primary { background: var(--air-blue); border-color: transparent; color: var(--on-color); }
+.btn.danger { background: var(--air-red); border-color: transparent; color: var(--on-color); }
+.btn.small { min-height: 30px; padding: 0 10px; font-size: 13px; font-weight: 500; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn .mo { font-family: var(--f-num); font-weight: 600; letter-spacing: .02em; }
+.center .btn { min-height: clamp(30px, 8cqi, 40px); font-size: clamp(12px, 3cqi, 15px); padding: 0 clamp(10px, 3cqi, 16px); }
+:is(.btn, .tbtn, .seg button, .tk input, .prop-row, .linkish):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.busy-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+
+.podium { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: min(100%, 320px); }
+.podium li { display: grid; grid-template-columns: 22px auto minmax(0, 1fr) auto; align-items: center; gap: 8px; background: var(--surface); border-radius: 8px; padding: 6px 10px; font-size: clamp(11px, 2.7cqi, 14px); text-align: left; }
+.podium .rk { font: 700 1.2em/1 var(--f-num); color: var(--ink-3); }
+.podium li:first-child .rk { color: var(--air-red); }
+.podium .nn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.podium .ww { font: 600 1.1em/1 var(--f-num); font-variant-numeric: tabular-nums; }
+.podium .chip-tok { width: 24px; height: 24px; font-size: 13px; }
+
+/* 棋子 */
+.tokens { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.tok {
+  position: absolute; left: 0; top: 0; width: var(--ts, 18px); height: var(--ts, 18px);
+  margin: calc(var(--ts, 18px) / -2) 0 0 calc(var(--ts, 18px) / -2);
+  border-radius: 50%; display: grid; place-items: center; background: var(--surface);
+  box-shadow: 0 0 0 2px var(--pc), 0 3px 6px -2px var(--shade);
+  font-size: calc(var(--ts, 18px) * .64); line-height: 1;
+  transition: transform .16s ease-out;
+}
+.tok.cur { box-shadow: 0 0 0 2px var(--pc), 0 0 0 5px color-mix(in srgb, var(--pc) 30%, transparent), 0 3px 6px -2px var(--shade); z-index: 2; }
+.tok.moving { z-index: 3; transition-duration: .12s; }
+.tok.hop > span { animation: hop .2s ease-out; }
+@keyframes hop { 50% { transform: translateY(-30%) scale(1.08); } }
+.noanim .tok { transition: none; }
+.floater {
+  position: absolute; z-index: 5; pointer-events: none; white-space: nowrap;
+  font: 700 clamp(11px, 2.8cqi, 17px)/1 var(--f-num); padding: 3px 6px; border-radius: 4px;
+  background: var(--surface); color: var(--good); box-shadow: 0 3px 8px -3px var(--shade);
+  animation: rise 1.6s ease-out forwards;
+}
+.floater.neg { color: var(--bad); }
+@keyframes rise { 0% { opacity: 0; transform: translate(-50%, 0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -40px); } }
+
+/* 机会 / 命运明信片 */
+.postcard {
+  position: absolute; left: 50%; top: 50%; z-index: 6; width: min(92%, 360px);
+  transform: translate(-50%, -50%) rotate(-2deg);
+  background: var(--surface); padding: clamp(10px, 3cqi, 18px); text-align: left; cursor: pointer;
+  border: 6px solid transparent;
+  border-image: repeating-linear-gradient(-45deg, var(--air-red) 0 8px, var(--gap-paper) 8px 12px, var(--air-blue) 12px 20px, var(--gap-paper) 20px 24px) 6;
+  box-shadow: 0 26px 50px -18px var(--shade);
+  animation: drop .32s ease-out;
+}
+@keyframes drop { from { opacity: 0; transform: translate(-50%, -60%) rotate(-8deg); } }
+.pc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.pc-who { font-size: clamp(11px, 2.6cqi, 13px); color: var(--ink-2); }
+.pc-stamp {
+  font: 400 clamp(14px, 4cqi, 22px)/1 var(--f-display); padding: 6px 8px; flex: none;
+  border: 2px dashed currentColor; border-radius: 3px; transform: rotate(4deg);
+}
+.pc-stamp.C { color: var(--air-red); }
+.pc-stamp.F { color: var(--air-blue); }
+.pc-text { margin: clamp(6px, 2cqi, 12px) 0 clamp(4px, 1.4cqi, 8px); font-size: clamp(13px, 3.4cqi, 18px); font-weight: 500; line-height: 1.45; }
+.pc-foot { font: 600 clamp(9px, 2cqi, 11px)/1 var(--f-num); letter-spacing: .16em; color: var(--ink-3); }
+
+/* ---------- 侧栏 ---------- */
+.side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.sec { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 16px; min-width: 0; }
+.sec > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.sec h2 { margin: 0; font: 400 21px/1.1 var(--f-display); letter-spacing: .02em; }
+.sec .count { font: 600 15px/1 var(--f-num); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-2); }
+.hint { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-2); }
+
+.seats, .pax-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.seat, .pax {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  padding: 8px 10px 8px 8px; border-radius: 10px; background: var(--surface-3); border: 1px solid transparent;
+}
+.pax.cur { border-color: var(--pc); background: color-mix(in srgb, var(--pc) 9%, var(--surface)); }
+.pax.out { opacity: .5; }
+.ptok {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 20px;
+  background: var(--surface); box-shadow: 0 0 0 2px var(--pc);
+}
+.pmain { min-width: 0; display: grid; gap: 2px; }
+.pname { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pname > span:first-child { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.psub { font-size: 12px; color: var(--ink-2); }
+.pcash { font: 600 19px/1 var(--f-num); font-variant-numeric: tabular-nums; text-align: right; }
+.pcash.bump { animation: bump .6s ease-out; }
+@keyframes bump { 30% { transform: scale(1.12); } }
+.tags { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.tag { font-size: 11px; line-height: 1; padding: 3px 6px; border-radius: 4px; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; font-weight: 500; }
+.tag.you { background: var(--air-blue); color: var(--on-color); }
+.tag.host { background: transparent; border: 1px solid var(--line); }
+.tag.warn { background: color-mix(in srgb, var(--warn) 16%, var(--surface)); color: var(--warn); }
+.tag.bad { background: color-mix(in srgb, var(--bad) 14%, var(--surface)); color: var(--bad); }
+.x-btn { appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 15px; line-height: 1; color: var(--ink-2); }
+.x-btn:hover { color: var(--bad); border-color: var(--bad); }
+
+.join { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.join label.fl { font-size: 12.5px; color: var(--ink-2); }
+.join input[type="text"] {
+  width: 100%; min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-3);
+}
+.join input[type="text"]:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+.tokpick { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tokpick legend { padding: 0; font-size: 12.5px; color: var(--ink-2); margin-bottom: 6px; }
+.tkrow { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.tk { position: relative; display: grid; place-items: center; aspect-ratio: 1; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-3); font-size: 20px; cursor: pointer; }
+.tk input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.tk:has(input:checked) { border-color: var(--air-blue); box-shadow: inset 0 0 0 2px var(--air-blue); background: var(--surface); }
+.tk:has(input:disabled) { opacity: .3; cursor: not-allowed; }
+.join-row, .row { display: flex; flex-wrap: wrap; gap: 8px; }
+.row { margin-top: 12px; }
+.cfg { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.cfg-label { font-size: 13px; color: var(--ink-2); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { appearance: none; border: 0; background: var(--surface); padding: 6px 12px; cursor: pointer; font-size: 13px; min-height: 32px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-checked="true"] { background: var(--air-blue); color: var(--on-color); font-weight: 600; }
+.seg button:disabled { cursor: not-allowed; }
+
+.mine-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.mine-cash { font: 600 28px/1 var(--f-num); font-variant-numeric: tabular-nums; }
+.mine-meta { font-size: 12.5px; color: var(--ink-2); }
+.props { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.prop-row {
+  appearance: none; width: 100%; display: flex; align-items: center; gap: 8px; text-align: left;
+  padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+}
+.prop-row:hover { border-color: var(--ink-3); }
+.prop-row .chip { width: 8px; align-self: stretch; min-height: 26px; border-radius: 2px; background: var(--gc); flex: none; }
+.prop-row .pn2 { display: grid; min-width: 0; }
+.prop-row .pn2 b { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prop-row .pn2 small { font-size: 11px; color: var(--ink-2); }
+.prop-row.mort { background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--hatch) 4px 5px); }
+.empty { margin: 12px 0 0; font-size: 13px; color: var(--ink-2); }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--air-blue); }
+.confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding: 10px; border-radius: 8px; background: color-mix(in srgb, var(--bad) 8%, var(--surface)); font-size: 13px; }
+
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; max-height: 360px; overflow-y: auto; font-size: 13px; color: var(--ink-2); }
+.log li { line-height: 1.5; padding-left: 10px; position: relative; }
+.log li::before { content: ""; position: absolute; left: 0; top: .62em; width: 4px; height: 4px; border-radius: 50%; background: var(--line); }
+.log li.new { animation: fadein .5s ease-out; }
+@keyframes fadein { from { opacity: 0; transform: translateY(-3px); } }
+.pn { font-weight: 600; color: color-mix(in srgb, var(--pc) 70%, var(--ink)); }
+.sq { color: var(--ink); font-weight: 500; text-decoration: underline; text-decoration-color: var(--gc); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.mo { font-family: var(--f-num); font-weight: 600; color: var(--ink); letter-spacing: .02em; }
+
+/* ---------- 弹层 ---------- */
+.modal-bg {
+  position: fixed; inset: 0; z-index: 50; background: var(--scrim);
+  display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.sheet {
+  width: min(100%, 380px); max-height: 100%; overflow: auto; background: var(--surface); color: var(--ink);
+  border-radius: 12px; box-shadow: 0 30px 60px -20px var(--shade);
+}
+.sheet.dlg { width: min(100%, 560px); padding: 20px 22px 22px; }
+.deed-head { padding: 16px 18px 14px; background: var(--gc, var(--surface-2)); color: var(--hc, var(--ink)); position: relative; }
+.deed-head .dc { font: 600 13px/1 var(--f-num); letter-spacing: .16em; opacity: .85; }
+.deed-head h3 { margin: 6px 0 4px; font: 400 30px/1 var(--f-display); letter-spacing: .03em; }
+.deed-head .dp { font: 600 16px/1 var(--f-num); letter-spacing: .03em; }
+.deed-body { padding: 14px 18px 18px; display: grid; gap: 12px; }
+.rent { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rent td { padding: 6px 2px; border-bottom: 1px solid var(--line); }
+.rent td:last-child { text-align: right; font: 600 15px/1 var(--f-num); font-variant-numeric: tabular-nums; }
+.rent tr.now td { color: var(--air-red); font-weight: 700; }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; font-size: 12.5px; color: var(--ink-2); }
+.facts b { font: 600 14px/1.3 var(--f-num); color: var(--ink); }
+.deed-desc { margin: 0; font-size: 14px; line-height: 1.6; }
+.owner-line { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.owner-line .chip-tok { width: 26px; height: 26px; font-size: 14px; }
+.deed-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.why { margin: 0; font-size: 12px; color: var(--ink-2); }
+.sheet-close { width: 100%; margin-top: 4px; }
+.dlg h3 { margin: 0 0 12px; font: 400 26px/1.1 var(--f-display); }
+.dlg h4 { margin: 18px 0 8px; font-size: 14px; }
+.dlg ol, .dlg ul { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; font-size: 14px; line-height: 1.6; color: var(--ink); }
+.dlg li::marker { color: var(--ink-3); }
+.dlg p { margin: 0; font-size: 14px; line-height: 1.6; }
+
+.toasts {
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  z-index: 60; width: min(calc(100% - 32px), 420px); display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
+.toast { background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 8px; font-size: 13.5px; box-shadow: 0 10px 24px -10px var(--shade); animation: fadein .25s ease-out; }
+.toast.bad { background: var(--bad); color: var(--on-color); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+/* ---------- 公开网页版 ---------- */
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+.landing { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: clamp(8px, 2.4cqi, 16px); width: 100%; }
+.landing > * { max-width: 100%; }
+.land-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.join-room { display: flex; gap: 8px; width: min(100%, 320px); }
+.join-room input {
+  flex: 1; min-width: 0; min-height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); font: 600 15px/1 var(--f-num); letter-spacing: .08em;
+}
+.join-room input::placeholder { font-family: var(--f-body); font-weight: 400; letter-spacing: 0; font-size: 13px; }
+.join-room input:focus, .linkbox input:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+.linkbox { display: flex; gap: 8px; margin-top: 12px; }
+.linkbox input { flex: 1; min-width: 0; min-height: 38px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-3); font-size: 13px; }
+.dlg .hint { margin-top: 10px; }
+.steps { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; font-size: 14px; line-height: 1.6; }
+.steps li::marker { color: var(--ink-3); }
+.tbtn.primary-t { background: var(--air-blue); color: var(--on-color); border-color: transparent; }
+@media (max-width: 600px) { input[type="text"] { font-size: 16px; } }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <h1><span>环球</span>大富翁</h1>
+      <span class="airmail"><b>航空</b>PAR AVION</span>
+    </div>
+    <div class="conn" id="conn" role="status"><i></i><span id="connTxt">正在连接…</span></div>
+    <div class="tools">
+      <button class="tbtn" type="button" data-act="rules">玩法</button>
+      <button class="tbtn primary-t" type="button" data-act="invite" id="inviteBtn" hidden>邀请朋友</button>
+      <button class="tbtn" type="button" data-act="leaveRoom" id="leaveBtn" hidden>离开房间</button>
+    </div>
+  </header>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <main class="layout">
+    <section class="board-col" aria-label="棋盘">
+      <div class="board">
+        <div class="grid" id="grid">
+          <div class="center" id="center">
+            <div class="c-logo" aria-hidden="true"><span>环球</span>大富翁</div>
+            <div class="c-meta" id="cMeta"></div>
+            <div class="c-main" id="cMain"><p class="c-wait">正在连接牌桌…</p></div>
+            <div class="dice" id="dice" hidden><div class="die" id="d0"></div><div class="die" id="d1"></div></div>
+            <div class="actions" id="actions"></div>
+            <div class="postcard" id="postcard" hidden role="dialog" aria-live="polite">
+              <div class="pc-top"><span class="pc-who" id="pcWho"></span><span class="pc-stamp" id="pcStamp"></span></div>
+              <p class="pc-text" id="pcText"></p>
+              <div class="pc-foot">航空 PAR AVION · 点一下关闭</div>
+            </div>
+          </div>
+          <div class="tokens" id="tokens" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="sec" id="startSec" hidden>
+        <header><h2>怎么开始</h2></header>
+        <ol class="steps">
+          <li>点棋盘中间的「创建房间」，会生成一个房间链接。</li>
+          <li>点右上角「邀请朋友」，把链接发给朋友。</li>
+          <li>大家打开链接，在「候机室」填昵称、选棋子入座，人齐了点「开始游戏」。</li>
+        </ol>
+        <p class="hint">不用注册，也不用登录。想先熟悉规则，可以点「单机试玩」和电脑玩家玩一局。</p>
+      </section>
+      <section class="sec" id="lobbySec" hidden>
+        <header><h2>候机室</h2><span class="count" id="seatCount">0 / 6</span></header>
+        <ol class="seats" id="seats"></ol>
+        <form class="join" id="joinForm" autocomplete="off">
+          <label class="fl" for="nick">昵称</label>
+          <input type="text" id="nick" name="nick" maxlength="10" placeholder="最多 10 个字，例如：阿明">
+          <fieldset class="tokpick">
+            <legend>选一个棋子</legend>
+            <div class="tkrow" id="tkrow"></div>
+          </fieldset>
+          <div class="join-row">
+            <button class="btn primary" type="submit" id="joinBtn">入座</button>
+            <button class="btn" type="button" id="addLocalBtn" data-act="addLocal" hidden>再加一位本地玩家</button>
+          </div>
+        </form>
+        <div class="row" id="lobbyTools"></div>
+        <div class="cfg">
+          <span class="cfg-label" id="cfgLabel">回合上限</span>
+          <div class="seg" role="radiogroup" aria-labelledby="cfgLabel" id="cfgSeg"></div>
+        </div>
+        <p class="hint" id="lobbyHint"></p>
+      </section>
+
+      <section class="sec" id="mineSec" hidden>
+        <header><h2>我的资产</h2><span class="count" id="mineCount"></span></header>
+        <div id="mineBody"></div>
+      </section>
+
+      <section class="sec" id="paxSec" hidden>
+        <header><h2>玩家</h2><span class="count" id="paxCount"></span></header>
+        <ol class="pax-list" id="pax"></ol>
+      </section>
+
+      <section class="sec" id="logSec">
+        <header><h2>动态</h2></header>
+        <ol class="log" id="log"><li>牌桌连接后，这里会显示每一步发生了什么。</li></ol>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div class="modal-bg" id="sheetBg" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="deedTitle"></div></div>
+<div class="modal-bg" id="dlgBg" hidden><div class="sheet dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle"></div></div>
+<div class="toasts" id="toasts"></div>
+<div class="sr" id="live" aria-live="polite"></div>
+
+<script src="mqtt.min.js"></script>
+<script>
+/* 环球大富翁 · 规则引擎（纯函数，不碰 DOM，可在 Node 里测试） */
+const MONO = (() => {
+  'use strict';
+
+  // ---------- 棋盘 ----------
+  // t: go 起点 | prop 城市 | rail 交通站 | util 公用事业 | tax 税 | chance 机会 | fate 命运
+  //    jail 监狱 | park 旅行基金 | gojail 入狱
+  const SQ = [
+    { t: 'go', n: '起点' },
+    { t: 'prop', n: '河内', c: 'HAN', g: 1, p: 60, r: [4, 20, 60, 180, 320, 450] },
+    { t: 'fate', n: '命运' },
+    { t: 'prop', n: '马尼拉', c: 'MNL', g: 1, p: 80, r: [6, 30, 90, 270, 400, 550] },
+    { t: 'rail', n: '高铁站', s: '高铁', c: 'HSR', p: 200 },
+    { t: 'prop', n: '曼谷', c: 'BKK', g: 2, p: 100, r: [8, 40, 100, 300, 450, 600] },
+    { t: 'tax', n: '所得税', a: 200 },
+    { t: 'prop', n: '吉隆坡', c: 'KUL', g: 2, p: 120, r: [10, 50, 150, 450, 625, 750] },
+    { t: 'jail', n: '监狱' },
+    { t: 'prop', n: '台北', c: 'TPE', g: 3, p: 140, r: [12, 60, 180, 500, 700, 900] },
+    { t: 'util', n: '电力公司', s: '电力', c: 'PWR', p: 150 },
+    { t: 'prop', n: '首尔', c: 'SEL', g: 3, p: 160, r: [14, 70, 200, 550, 750, 950] },
+    { t: 'rail', n: '国际机场', s: '机场', c: 'AIR', p: 200 },
+    { t: 'prop', n: '上海', c: 'SHA', g: 4, p: 180, r: [16, 80, 220, 600, 800, 1000] },
+    { t: 'chance', n: '机会' },
+    { t: 'prop', n: '香港', c: 'HKG', g: 4, p: 200, r: [18, 90, 250, 700, 875, 1050] },
+    { t: 'park', n: '旅行基金' },
+    { t: 'prop', n: '悉尼', c: 'SYD', g: 5, p: 220, r: [20, 100, 300, 750, 925, 1100] },
+    { t: 'fate', n: '命运' },
+    { t: 'prop', n: '迪拜', c: 'DXB', g: 5, p: 240, r: [22, 110, 330, 800, 975, 1150] },
+    { t: 'rail', n: '邮轮港', s: '邮轮', c: 'SEA', p: 200 },
+    { t: 'prop', n: '巴黎', c: 'PAR', g: 6, p: 260, r: [24, 120, 360, 850, 1025, 1200] },
+    { t: 'util', n: '自来水公司', s: '自来水', c: 'WTR', p: 150 },
+    { t: 'prop', n: '米兰', c: 'MIL', g: 6, p: 280, r: [26, 130, 390, 900, 1100, 1275] },
+    { t: 'gojail', n: '入狱' },
+    { t: 'prop', n: '伦敦', c: 'LON', g: 7, p: 300, r: [28, 150, 450, 1000, 1200, 1400] },
+    { t: 'chance', n: '机会' },
+    { t: 'prop', n: '新加坡', c: 'SIN', g: 7, p: 320, r: [30, 160, 470, 1050, 1250, 1450] },
+    { t: 'rail', n: '地铁站', s: '地铁', c: 'MRT', p: 200 },
+    { t: 'prop', n: '东京', c: 'TYO', g: 8, p: 350, r: [35, 175, 500, 1100, 1300, 1500] },
+    { t: 'tax', n: '奢侈税', a: 100 },
+    { t: 'prop', n: '纽约', c: 'NYC', g: 8, p: 400, r: [50, 200, 600, 1400, 1700, 2000] },
+  ];
+  const N = SQ.length; // 32
+  const JAIL = 8;
+  const HOUSE = { 1: 50, 2: 50, 3: 100, 4: 100, 5: 150, 6: 150, 7: 200, 8: 200 };
+  const RAILS = [4, 12, 20, 28];
+  const UTILS = [10, 22];
+  const GROUP = {};
+  SQ.forEach((q, i) => { if (q.g) (GROUP[q.g] = GROUP[q.g] || []).push(i); });
+
+  const START_CASH = 1500, GO_PAY = 200, BAIL = 50, MAX_P = 6, LOG_MAX = 60;
+  const TOKENS = ['🐼', '🦊', '🐸', '🐯', '🐧', '🐙', '🐨', '🦄'];
+  const BOT_NAMES = ['背包客', '空乘', '导游', '领队', '摄影师', '地陪'];
+  const ROUND_OPTS = [0, 15, 25, 40];
+  const ACQ_RATE = 2;
+
+  // ---------- 卡牌 ----------
+  // e: to 前往 | rail 最近交通站 | gain 收钱 | pay 付钱进基金 | back 后退 | jail 入狱
+  //    card 免签通行证 | fix 房屋维修 | payall 付给每人 | collect 每人付你
+  const CARDS = {
+    C: [
+      { x: '升舱成功！前往「起点」，领取 $200。', e: 'to', v: 0 },
+      { x: '说走就走：前往「东京」。经过起点可领 $200。', e: 'to', v: 29 },
+      { x: '转机去「香港」。经过起点可领 $200。', e: 'to', v: 15 },
+      { x: '赶最近的一班车：前往前方最近的交通站。', e: 'rail' },
+      { x: '旅行 Vlog 爆红，广告分成 $150。', e: 'gain', v: 150 },
+      { x: '换汇赶上好汇率，赚了 $50。', e: 'gain', v: 50 },
+      { x: '走错登机口，后退 3 格。', e: 'back', v: 3 },
+      { x: '护照过期被边检拦下，直接入狱。', e: 'jail' },
+      { x: '获得「免签通行证」，留着可以免费出狱。', e: 'card' },
+      { x: '酒店集体翻新：每栋房屋付 $25，每家酒店付 $100。', e: 'fix', v: [25, 100] },
+      { x: '行李超重，罚款 $15。', e: 'pay', v: 15 },
+      { x: '当选旅行团团长，请大家喝咖啡：付给每位玩家 $50。', e: 'payall', v: 50 },
+    ],
+    F: [
+      { x: '前往「起点」，领取 $200。', e: 'to', v: 0 },
+      { x: '航班超售，拿到补偿 $200。', e: 'gain', v: 200 },
+      { x: '水土不服看急诊，医药费 $50。', e: 'pay', v: 50 },
+      { x: '老同学还钱，收到 $50。', e: 'gain', v: 50 },
+      { x: '获得「免签通行证」，留着可以免费出狱。', e: 'card' },
+      { x: '海关抽检出违禁品，直接入狱。', e: 'jail' },
+      { x: '年终奖到账，收到 $100。', e: 'gain', v: 100 },
+      { x: '购物退税成功，收到 $20。', e: 'gain', v: 20 },
+      { x: '生日快乐！每位玩家送你 $10。', e: 'collect', v: 10 },
+      { x: '旅行险理赔到账，收到 $100。', e: 'gain', v: 100 },
+      { x: '民宿差评闹纠纷，赔偿 $100。', e: 'pay', v: 100 },
+      { x: '城市维护费：每栋房屋付 $40，每家酒店付 $115。', e: 'fix', v: [40, 115] },
+    ],
+  };
+
+  // ---------- 工具 ----------
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  function shuffle(a, rnd) {
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function rid(rnd) { let s = ''; for (let i = 0; i < 10; i++) s += 'abcdefghijkmnpqrstuvwxyz23456789'[Math.floor(rnd() * 32)]; return s; }
+  function cleanNick(v) {
+    const s = String(v == null ? '' : v)
+      .replace(/[\u0000-\u001f\u007f-\u009f\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, '')
+      .replace(/\s+/g, ' ').trim();
+    return Array.from(s).slice(0, 10).join('');
+  }
+  function L(s, ...segs) {
+    s.lc = (s.lc || 0) + 1;
+    s.log.push({ k: s.lc, s: segs });
+    if (s.log.length > LOG_MAX) s.log.splice(0, s.log.length - LOG_MAX);
+  }
+  const alive = (s) => s.ps.map((p, i) => i).filter((i) => !s.ps[i].out);
+  const ownerOf = (s, q) => (s.own[q] ? s.own[q].o : -1);
+  const groupHouses = (s, g) => GROUP[g].reduce((n, q) => n + (s.own[q] ? s.own[q].h : 0), 0);
+  const ownsGroup = (s, i, g) => GROUP[g].every((q) => s.own[q] && s.own[q].o === i);
+  const mortValue = (q) => SQ[q].p / 2;
+  const unmortCost = (q) => Math.ceil(SQ[q].p / 2 * 1.1);
+  const acqPrice = (q) => SQ[q].p * ACQ_RATE;
+  // 收购：停在别人的城市上，而同色其余城市都归你，就可以按 2 倍地价买下它
+  function canAcquire(s, i, q) {
+    const sq = SQ[q], o = s.own[q];
+    if (!sq || sq.t !== 'prop' || !o || o.o === i || o.h > 0) return false;
+    return GROUP[sq.g].every((x) => x === q || (s.own[x] && s.own[x].o === i));
+  }
+
+  function netWorth(s, i) {
+    let w = s.ps[i].cash;
+    for (const k in s.own) {
+      const o = s.own[k], q = +k;
+      if (o.o !== i) continue;
+      w += o.m ? SQ[q].p / 2 : SQ[q].p;
+      if (o.h && SQ[q].g) w += o.h * HOUSE[SQ[q].g];
+    }
+    return w;
+  }
+
+  function rentOf(s, q, tot) {
+    const sq = SQ[q], o = s.own[q];
+    if (!o) return 0;
+    if (sq.t === 'prop') {
+      if (o.h > 0) return sq.r[o.h];
+      return sq.r[0] * (ownsGroup(s, o.o, sq.g) ? 2 : 1);
+    }
+    if (sq.t === 'rail') {
+      const n = RAILS.filter((r) => s.own[r] && s.own[r].o === o.o).length;
+      return 25 * Math.pow(2, n - 1);
+    }
+    if (sq.t === 'util') {
+      const n = UTILS.filter((u) => s.own[u] && s.own[u].o === o.o).length;
+      return (tot || 7) * (n === 2 ? 10 : 4);
+    }
+    return 0;
+  }
+
+  // ---------- 牌桌 ----------
+  function newTable(rnd) {
+    rnd = rnd || Math.random;
+    return {
+      v: 1, ver: 0, st: 'lobby', gid: rid(rnd), ps: [], turn: 0, ph: 'roll',
+      dice: [0, 0], rk: 0, dbl: 0, extra: false, own: {}, pot: 0, round: 1, maxR: 25,
+      dk: { C: [], F: [] }, card: null, mv: null, pend: -1, log: [], lc: 0,
+      starter: null, win: -1, rank: null, worth: null, seen: {}, rej: null, why: '',
+    };
+  }
+
+  function newPlayer(s, id, nick, tok, bot) {
+    const used = s.ps.map((p) => p.col);
+    let col = 0; while (used.includes(col)) col++;
+    return { id, nick, tok, bot: !!bot, auto: false, cash: 0, pos: 0, jail: false, jt: 0, cards: 0, out: false, outAt: 0, col };
+  }
+
+  function freeToken(s) {
+    for (let t = 0; t < TOKENS.length; t++) if (!s.ps.some((p) => p.tok === t)) return t;
+    return 0;
+  }
+
+  // ---------- 移动 ----------
+  function pushMove(s, i, from, to, w) {
+    if (!s.mv || s.mv.k !== s.ver || s.mv.p !== i) s.mv = { k: s.ver, p: i, from, path: [] };
+    s.mv.path.push({ to, w });
+  }
+  function markCard(s, i) {
+    if (s.mv && s.mv.k === s.ver && s.mv.p === i) s.mv.path.push({ c: 1 });
+  }
+
+  // 向前走 n 格，经过或停在起点领钱，然后结算落点
+  function moveBy(s, i, n) {
+    const P = s.ps[i];
+    const from = P.pos, to = (from + n) % N;
+    pushMove(s, i, from, to, 1);
+    P.pos = to;
+    if (from + n >= N) { P.cash += GO_PAY; L(s, { p: i }, ' 经过起点，领取 ', { m: GO_PAY }); }
+    land(s, i);
+  }
+  function advanceTo(s, i, target) {
+    const P = s.ps[i];
+    let steps = (target - P.pos + N) % N;
+    if (steps === 0) steps = N;
+    L(s, { p: i }, ' 前往 ', { q: target });
+    moveBy(s, i, steps);
+  }
+  function back(s, i, n) {
+    const P = s.ps[i];
+    const from = P.pos, to = (from - n + N) % N;
+    pushMove(s, i, from, to, -1);
+    P.pos = to;
+    L(s, { p: i }, ' 后退到 ', { q: to });
+    land(s, i);
+  }
+  function goJail(s, i) {
+    const P = s.ps[i];
+    pushMove(s, i, P.pos, JAIL, 0);
+    P.pos = JAIL; P.jail = true; P.jt = 0;
+    if (s.turn === i) { s.extra = false; s.dbl = 0; s.ph = 'end'; }
+    L(s, { p: i }, ' 进了监狱');
+  }
+
+  // ---------- 付钱、变卖、破产 ----------
+  function credit(s, to, amt) {
+    if (to === 'pot') s.pot += amt;
+    else if (typeof to === 'number' && s.ps[to] && !s.ps[to].out) s.ps[to].cash += amt;
+  }
+
+  // 现金不够时自动变卖：先抵押没盖房的地产（便宜的先），再卖房
+  function liquidate(s, i, need) {
+    const P = s.ps[i];
+    let sold = 0, morts = 0, got = 0, guard = 200;
+    while (P.cash < need && guard-- > 0) {
+      let best = -1, bestV = Infinity;
+      for (const k in s.own) {
+        const o = s.own[k], q = +k;
+        if (o.o !== i || o.m) continue;
+        if (SQ[q].t === 'prop' && groupHouses(s, SQ[q].g) > 0) continue;
+        if (mortValue(q) < bestV) { bestV = mortValue(q); best = q; }
+      }
+      if (best >= 0) { s.own[best].m = true; P.cash += bestV; got += bestV; morts++; continue; }
+      let hq = -1;
+      for (const k in s.own) {
+        const o = s.own[k], q = +k;
+        if (o.o !== i || !o.h) continue;
+        if (hq < 0 || o.h > s.own[hq].h || (o.h === s.own[hq].h && HOUSE[SQ[q].g] < HOUSE[SQ[hq].g])) hq = q;
+      }
+      if (hq >= 0) { s.own[hq].h--; const r = HOUSE[SQ[hq].g] / 2; P.cash += r; got += r; sold++; continue; }
+      break;
+    }
+    if (sold || morts) {
+      const parts = [];
+      if (sold) parts.push(`卖掉 ${sold} 栋房屋`);
+      if (morts) parts.push(`抵押 ${morts} 处地产`);
+      L(s, { p: i }, ` 现金不够，自动${parts.join('、')}，筹到 `, { m: got });
+    }
+  }
+
+  // 返回 true 表示付清，false 表示破产
+  function pay(s, i, amt, to) {
+    const P = s.ps[i];
+    if (P.out || amt <= 0) return !P.out;
+    if (P.cash < amt) liquidate(s, i, amt);
+    if (P.cash < amt) { bankrupt(s, i, to); return false; }
+    P.cash -= amt;
+    credit(s, to, amt);
+    return true;
+  }
+
+  function bankrupt(s, i, to) {
+    const P = s.ps[i];
+    const cash = P.cash;
+    P.cash = 0;
+    if (typeof to === 'number' && s.ps[to] && !s.ps[to].out && to !== i) {
+      const C = s.ps[to];
+      C.cash += cash;
+      C.cards += P.cards;
+      for (const k in s.own) if (s.own[k].o === i) { s.own[k].o = to; s.own[k].h = 0; }
+      L(s, { p: i }, ' 破产了，剩余资产全部归 ', { p: to });
+    } else {
+      if (to === 'pot') s.pot += cash;
+      for (const k in s.own) if (s.own[k].o === i) delete s.own[k];
+      L(s, { p: i }, ' 破产了，地产收归银行');
+    }
+    P.cards = 0; P.out = true; P.jail = false; P.jt = 0; P.auto = false; P.outAt = s.ver * 100 + i;
+    if (s.turn === i) { s.extra = false; s.ph = 'end'; s.pend = -1; }
+    if (alive(s).length <= 1) { finish(s, 'last'); return; }
+    fixPending(s);
+  }
+
+  // 有人破产后，当前玩家待定的买地或收购可能已经失效
+  function fixPending(s) {
+    if (s.st !== 'play' || s.pend < 0 || s.ph !== 'acq') return;
+    const i = s.turn, q = s.pend, P = s.ps[i];
+    if (canAcquire(s, i, q)) return;
+    if (!s.own[q]) { s.ph = 'buy'; return; }
+    s.pend = -1;
+    s.ph = s.extra && !P.jail ? 'roll' : 'end';
+  }
+
+  function finish(s, why) {
+    if (s.st !== 'play') return;
+    s.st = 'over'; s.ph = 'end'; s.pend = -1; s.why = why;
+    const idx = s.ps.map((p, i) => i);
+    const live = idx.filter((i) => !s.ps[i].out).sort((a, b) => netWorth(s, b) - netWorth(s, a));
+    const dead = idx.filter((i) => s.ps[i].out).sort((a, b) => s.ps[b].outAt - s.ps[a].outAt);
+    s.rank = live.concat(dead);
+    s.win = s.rank[0];
+    s.worth = s.ps.map((p, i) => netWorth(s, i));
+    const lead = why === 'rounds' ? '回合数已到，按总资产结算。' : why === 'early' ? '提前结算，按总资产排名。' : '只剩最后一位玩家。';
+    L(s, lead, { p: s.win }, ' 获胜！');
+  }
+
+  function nextTurn(s) {
+    if (s.st !== 'play') return;
+    const n = s.ps.length;
+    let i = s.turn;
+    for (let k = 0; k < n; k++) { i = (i + 1) % n; if (!s.ps[i].out) break; }
+    if (i <= s.turn) {
+      s.round++;
+      if (s.maxR && s.round > s.maxR) { finish(s, 'rounds'); return; }
+    }
+    s.turn = i; s.ph = 'roll'; s.dbl = 0; s.extra = false; s.pend = -1;
+  }
+
+  // ---------- 落点 ----------
+  function land(s, i) {
+    const P = s.ps[i];
+    if (P.out || s.st !== 'play') return;
+    const q = P.pos, sq = SQ[q];
+    switch (sq.t) {
+      case 'park':
+        if (s.pot > 0) { const g = s.pot; P.cash += g; s.pot = 0; L(s, { p: i }, ' 领走了旅行基金 ', { m: g }); }
+        break;
+      case 'gojail':
+        goJail(s, i);
+        break;
+      case 'tax':
+        L(s, { p: i }, ` 缴纳${sq.n} `, { m: sq.a });
+        pay(s, i, sq.a, 'pot');
+        break;
+      case 'chance': case 'fate':
+        drawCard(s, i, sq.t === 'chance' ? 'C' : 'F');
+        break;
+      case 'prop': case 'rail': case 'util': {
+        const o = s.own[q];
+        if (!o) { if (s.turn === i) { s.ph = 'buy'; s.pend = q; } return; }
+        if (o.o === i) return;
+        if (o.m) {
+          L(s, ' ', { q }, ' 已抵押，免付租金');
+          if (s.turn === i && canAcquire(s, i, q)) { s.ph = 'acq'; s.pend = q; }
+          return;
+        }
+        const rent = rentOf(s, q, s.dice[0] + s.dice[1]);
+        L(s, { p: i }, ' 向 ', { p: o.o }, ' 支付租金 ', { m: rent });
+        if (pay(s, i, rent, o.o) && s.st === 'play' && s.turn === i && canAcquire(s, i, q)) { s.ph = 'acq'; s.pend = q; }
+        break;
+      }
+      default: break;
+    }
+  }
+
+  function drawCard(s, i, d) {
+    const deck = s.dk[d];
+    if (!deck || !deck.length) return;
+    const ci = deck.shift(); deck.push(ci);
+    const c = CARDS[d][ci];
+    s.card = { d, i: ci, k: s.ver, p: i };
+    markCard(s, i);
+    L(s, { p: i }, d === 'C' ? ' 抽到机会：' : ' 抽到命运：', c.x);
+    const P = s.ps[i];
+    switch (c.e) {
+      case 'to': advanceTo(s, i, c.v); break;
+      case 'rail': {
+        let best = 0, bs = 99;
+        for (const r of RAILS) { const st = (r - P.pos + N) % N || N; if (st < bs) { bs = st; best = r; } }
+        advanceTo(s, i, best);
+        break;
+      }
+      case 'gain': P.cash += c.v; break;
+      case 'pay': pay(s, i, c.v, 'pot'); break;
+      case 'back': back(s, i, c.v); break;
+      case 'jail': goJail(s, i); break;
+      case 'card': P.cards++; break;
+      case 'fix': {
+        let houses = 0, hotels = 0;
+        for (const k in s.own) { const o = s.own[k]; if (o.o !== i) continue; if (o.h === 5) hotels++; else houses += o.h; }
+        const cost = houses * c.v[0] + hotels * c.v[1];
+        if (cost > 0) { L(s, { p: i }, ` 有 ${houses} 栋房屋、${hotels} 家酒店，共付 `, { m: cost }); pay(s, i, cost, 'pot'); }
+        else L(s, { p: i }, ' 名下没有房屋，不用付钱');
+        break;
+      }
+      case 'payall':
+        for (const j of alive(s)) { if (j === i) continue; if (!pay(s, i, c.v, j) || s.st !== 'play') break; }
+        break;
+      case 'collect':
+        for (const j of alive(s)) { if (j === i) continue; pay(s, j, c.v, i); if (s.st !== 'play') break; }
+        break;
+      default: break;
+    }
+  }
+
+  function settle(s, i) {
+    if (s.st !== 'play') return;
+    const P = s.ps[i];
+    if (P.out || s.ph === 'buy' || s.ph === 'acq') return;
+    s.ph = s.extra && !P.jail ? 'roll' : 'end';
+  }
+
+  function roll(s, i, rnd) {
+    const P = s.ps[i];
+    const d1 = 1 + Math.floor(rnd() * 6), d2 = 1 + Math.floor(rnd() * 6);
+    const tot = d1 + d2, dbl = d1 === d2;
+    s.dice = [d1, d2]; s.rk = s.ver; s.ph = 'moving';
+    if (P.jail) {
+      s.extra = false;
+      if (dbl) {
+        P.jail = false; P.jt = 0;
+        L(s, { p: i }, ` 掷出 ${d1}+${d2}，双数出狱，来到 `, { q: (P.pos + tot) % N });
+        moveBy(s, i, tot);
+      } else if (P.jt >= 2) {
+        L(s, { p: i }, ` 掷出 ${d1}+${d2}，第三次没出狱，缴纳保释金 `, { m: BAIL });
+        if (!pay(s, i, BAIL, 'pot')) return;
+        P.jail = false; P.jt = 0;
+        L(s, { p: i }, ' 出狱，来到 ', { q: (P.pos + tot) % N });
+        moveBy(s, i, tot);
+      } else {
+        P.jt++;
+        L(s, { p: i }, ` 掷出 ${d1}+${d2}，没能出狱（第 ${P.jt} 次）`);
+        s.ph = 'end';
+        return;
+      }
+    } else {
+      if (dbl) s.dbl++;
+      if (dbl && s.dbl >= 3) {
+        L(s, { p: i }, ` 掷出 ${d1}+${d2}，连续三次双数，超速被拦下`);
+        goJail(s, i);
+        return;
+      }
+      s.extra = dbl;
+      L(s, { p: i }, ` 掷出 ${d1}+${d2}${dbl ? '（双数，可再掷）' : ''}，来到 `, { q: (P.pos + tot) % N });
+      moveBy(s, i, tot);
+    }
+    settle(s, i);
+  }
+
+  // ---------- 建房、卖房、抵押 ----------
+  function canBuild(s, i, q) {
+    const sq = SQ[q], o = s.own[q];
+    if (!sq || sq.t !== 'prop') return '只有城市可以盖房';
+    if (!o || o.o !== i) return '这不是你的地产';
+    if (o.h >= 5) return '已经盖到酒店了';
+    for (const g of GROUP[sq.g]) {
+      const go = s.own[g];
+      if (!go || go.o !== i) return '集齐同色城市后才能盖房';
+      if (go.m) return '同色城市有抵押，先赎回';
+    }
+    const minH = Math.min(...GROUP[sq.g].map((g) => s.own[g].h));
+    if (o.h > minH) return '同色城市要轮流盖，先盖另一座';
+    if (s.ps[i].cash < HOUSE[sq.g]) return '现金不够';
+    return null;
+  }
+  function canSell(s, i, q) {
+    const sq = SQ[q], o = s.own[q];
+    if (!sq || sq.t !== 'prop' || !o || o.o !== i) return '这不是你的地产';
+    if (!o.h) return '这里没有房屋';
+    const maxH = Math.max(...GROUP[sq.g].map((g) => (s.own[g] ? s.own[g].h : 0)));
+    if (o.h < maxH) return '同色城市要轮流卖，先卖房多的那座';
+    return null;
+  }
+  function canMort(s, i, q) {
+    const sq = SQ[q], o = s.own[q];
+    if (!sq || !o || o.o !== i) return '这不是你的地产';
+    if (o.m) return '已经抵押了';
+    if (sq.t === 'prop' && groupHouses(s, sq.g) > 0) return '同色城市还有房屋，先卖房';
+    return null;
+  }
+  function canUnmort(s, i, q) {
+    const o = s.own[q];
+    if (!o || o.o !== i) return '这不是你的地产';
+    if (!o.m) return '没有抵押';
+    if (s.ps[i].cash < unmortCost(q)) return '现金不够';
+    return null;
+  }
+
+  // ---------- 开局与重开 ----------
+  function startGame(s, pid, rnd) {
+    shuffle(s.ps, rnd);
+    for (const p of s.ps) { p.cash = START_CASH; p.pos = 0; p.jail = false; p.jt = 0; p.cards = 0; p.out = false; p.outAt = 0; p.auto = false; }
+    Object.assign(s, {
+      st: 'play', turn: 0, ph: 'roll', dbl: 0, extra: false, own: {}, pot: 0, round: 1,
+      dk: { C: shuffle(CARDS.C.map((c, k) => k), rnd), F: shuffle(CARDS.F.map((c, k) => k), rnd) },
+      card: null, mv: null, pend: -1, dice: [0, 0], rk: 0, win: -1, rank: null, worth: null, starter: pid, why: '',
+      gid: rid(rnd), log: [],
+    });
+    L(s, `对局开始，共 ${s.ps.length} 位玩家。`, { p: 0 }, ' 先走。');
+  }
+  function resetTable(s, rnd) {
+    for (const p of s.ps) { p.cash = 0; p.pos = 0; p.jail = false; p.jt = 0; p.cards = 0; p.out = false; p.outAt = 0; p.auto = false; }
+    Object.assign(s, {
+      st: 'lobby', turn: 0, ph: 'roll', dbl: 0, extra: false, own: {}, pot: 0, round: 1, dk: { C: [], F: [] },
+      card: null, mv: null, pend: -1, dice: [0, 0], rk: 0, win: -1, rank: null, worth: null, starter: null, why: '',
+      gid: rid(rnd), log: [],
+    });
+    L(s, '回到候机室，准备下一局。');
+  }
+
+  // ---------- 处理一个玩家操作 ----------
+  function handle(s, pid, a, rnd) {
+    if (!a || typeof a.t !== 'string') return '无效操作';
+    s.ver++;
+    const me = s.ps.findIndex((p) => p.id === pid);
+    const t = a.t;
+
+    if (s.st === 'lobby') {
+      switch (t) {
+        case 'join': {
+          const nick = cleanNick(a.nick);
+          if (!nick) return '请先填写昵称';
+          let tok = Number.isInteger(a.tok) && a.tok >= 0 && a.tok < TOKENS.length ? a.tok : freeToken(s);
+          if (s.ps.some((p, k) => k !== me && p.tok === tok)) return '这个棋子已经有人选了';
+          if (me >= 0) { s.ps[me].nick = nick; s.ps[me].tok = tok; return null; }
+          if (s.ps.length >= MAX_P) return '座位已满，最多 6 位玩家';
+          s.ps.push(newPlayer(s, String(pid), nick, tok, false));
+          L(s, nick + ' 入座');
+          return null;
+        }
+        case 'leave':
+          if (me < 0) return '你还没有入座';
+          L(s, s.ps[me].nick + ' 离座');
+          s.ps.splice(me, 1);
+          return null;
+        case 'addBot': {
+          if (me < 0) return '入座后才能添加电脑玩家';
+          if (s.ps.length >= MAX_P) return '座位已满，最多 6 位玩家';
+          const name = BOT_NAMES.find((b) => !s.ps.some((p) => p.nick === b)) || '电脑' + (s.ps.length + 1);
+          s.ps.push(newPlayer(s, 'bot:' + rid(rnd), name, freeToken(s), true));
+          L(s, name + '（电脑）入座');
+          return null;
+        }
+        case 'kick': {
+          if (me < 0) return '入座后才能操作';
+          const k = a.i;
+          if (!Number.isInteger(k) || !s.ps[k]) return '找不到这位玩家';
+          L(s, s.ps[k].nick + ' 被请离座位');
+          s.ps.splice(k, 1);
+          return null;
+        }
+        case 'cfg':
+          if (me < 0) return '入座后才能修改设置';
+          if (!ROUND_OPTS.includes(a.maxR)) return '无效的回合设置';
+          s.maxR = a.maxR;
+          return null;
+        case 'start':
+          if (me < 0) return '入座后才能开始';
+          if (s.ps.length < 2) return '至少需要 2 位玩家';
+          startGame(s, pid, rnd);
+          return null;
+        default:
+          return '对局还没开始';
+      }
+    }
+
+    if (s.st === 'over') {
+      if (t === 'reset') {
+        if (me < 0) return '只有本局玩家可以重开';
+        resetTable(s, rnd);
+        return null;
+      }
+      return '对局已经结束';
+    }
+
+    // 对局中
+    if (me < 0) return '你不在本局中';
+    const P = s.ps[me];
+    if (P.out) return '你已经出局了';
+
+    switch (t) {
+      case 'auto':
+        P.auto = !!a.on;
+        L(s, { p: me }, P.auto ? ' 开启托管' : ' 取消托管');
+        return null;
+      case 'resign':
+        L(s, { p: me }, ' 认输');
+        bankrupt(s, me, 'bank');
+        if (s.st === 'play' && s.ps[s.turn].out) nextTurn(s);
+        return null;
+      case 'endGame':
+        if (s.starter !== pid) return '只有开局的玩家可以提前结算';
+        finish(s, 'early');
+        return null;
+      default: break;
+    }
+
+    if (s.turn !== me) return '还没轮到你';
+
+    switch (t) {
+      case 'roll':
+        if (s.ph !== 'roll') return '现在不能掷骰子';
+        roll(s, me, rnd);
+        break;
+      case 'bail':
+        if (s.ph !== 'roll' || !P.jail) return '你不在监狱里';
+        if (P.cash < BAIL) return '现金不够 $50';
+        P.cash -= BAIL; s.pot += BAIL; P.jail = false; P.jt = 0;
+        L(s, { p: me }, ' 缴纳保释金 ', { m: BAIL }, '，出狱');
+        break;
+      case 'useCard':
+        if (s.ph !== 'roll' || !P.jail) return '你不在监狱里';
+        if (P.cards < 1) return '你没有免签通行证';
+        P.cards--; P.jail = false; P.jt = 0;
+        L(s, { p: me }, ' 用免签通行证出狱');
+        break;
+      case 'buy': {
+        if (s.ph !== 'buy' || s.pend < 0) return '现在不能购买';
+        const q = s.pend, price = SQ[q].p;
+        if (P.cash < price) return '现金不够';
+        P.cash -= price;
+        s.own[q] = { o: me, h: 0, m: false };
+        L(s, { p: me }, ' 买下 ', { q }, '，花费 ', { m: price });
+        s.pend = -1;
+        s.ph = s.extra && !P.jail ? 'roll' : 'end';
+        break;
+      }
+      case 'acq': {
+        if (s.ph !== 'acq' || s.pend < 0) return '现在不能收购';
+        const q = s.pend, price = acqPrice(q);
+        if (!canAcquire(s, me, q)) return '已经不能收购这座城市';
+        if (P.cash < price) return '现金不够';
+        const from = s.own[q].o;
+        P.cash -= price; s.ps[from].cash += price; s.own[q].o = me;
+        L(s, { p: me }, ' 以 ', { m: price }, ' 从 ', { p: from }, ' 手里收购了 ', { q }, '，集齐同色城市');
+        s.pend = -1;
+        s.ph = s.extra && !P.jail ? 'roll' : 'end';
+        break;
+      }
+      case 'pass':
+        if ((s.ph !== 'buy' && s.ph !== 'acq') || s.pend < 0) return '现在不能放弃';
+        L(s, { p: me }, s.ph === 'acq' ? ' 没有收购 ' : ' 没买 ', { q: s.pend });
+        s.pend = -1;
+        s.ph = s.extra && !P.jail ? 'roll' : 'end';
+        break;
+      case 'end':
+        if (s.ph !== 'end') return '现在还不能结束回合';
+        nextTurn(s);
+        break;
+      case 'build': case 'sell': case 'mort': case 'unmort': {
+        if (!['roll', 'buy', 'acq', 'end'].includes(s.ph)) return '现在不能操作地产';
+        const q = a.q;
+        if (!Number.isInteger(q) || q < 0 || q >= N) return '无效的地产';
+        const chk = { build: canBuild, sell: canSell, mort: canMort, unmort: canUnmort }[t];
+        const err = chk(s, me, q);
+        if (err) return err;
+        const o = s.own[q], g = SQ[q].g;
+        if (t === 'build') {
+          P.cash -= HOUSE[g]; o.h++;
+          L(s, { p: me }, ' 在 ', { q }, o.h === 5 ? ' 盖起酒店，花费 ' : ` 盖了第 ${o.h} 栋房屋，花费 `, { m: HOUSE[g] });
+        } else if (t === 'sell') {
+          o.h--; P.cash += HOUSE[g] / 2;
+          L(s, { p: me }, ' 卖掉 ', { q }, ' 的一栋房屋，收回 ', { m: HOUSE[g] / 2 });
+        } else if (t === 'mort') {
+          o.m = true; P.cash += mortValue(q);
+          L(s, { p: me }, ' 抵押 ', { q }, '，得到 ', { m: mortValue(q) });
+        } else {
+          o.m = false; P.cash -= unmortCost(q);
+          L(s, { p: me }, ' 赎回 ', { q }, '，花费 ', { m: unmortCost(q) });
+        }
+        break;
+      }
+      default:
+        return '无效操作';
+    }
+    if (s.st === 'play' && s.ps[s.turn].out) nextTurn(s);
+    return null;
+  }
+
+  // 返回 {ok, s, err}；不修改传入的状态
+  function apply(s0, pid, a, rnd) {
+    rnd = rnd || Math.random;
+    const s = clone(s0);
+    let err;
+    try { err = handle(s, pid, a, rnd); } catch (e) { err = '规则出错：' + (e && e.message ? e.message : e); }
+    if (err) return { ok: false, err, s: s0 };
+    return { ok: true, s };
+  }
+
+  // ---------- 电脑玩家 ----------
+  function bestBuild(s, i, reserve) {
+    let best = -1, gain = -1;
+    for (const k in s.own) {
+      const q = +k, o = s.own[k];
+      if (o.o !== i || SQ[q].t !== 'prop') continue;
+      if (canBuild(s, i, q)) continue;
+      if (s.ps[i].cash - HOUSE[SQ[q].g] < reserve) continue;
+      const gn = SQ[q].r[o.h + 1] - (o.h ? SQ[q].r[o.h] : SQ[q].r[0] * 2);
+      if (gn > gain) { gain = gn; best = q; }
+    }
+    return best;
+  }
+  function bestUnmort(s, i, reserve) {
+    let best = -1, val = -1;
+    for (const k in s.own) {
+      const q = +k, o = s.own[k];
+      if (o.o !== i || !o.m) continue;
+      if (s.ps[i].cash - unmortCost(q) < reserve) continue;
+      const v = SQ[q].g && ownsGroup(s, i, SQ[q].g) ? SQ[q].p * 2 : SQ[q].p;
+      if (v > val) { val = v; best = q; }
+    }
+    return best;
+  }
+  function botAct(s) {
+    if (s.st !== 'play') return null;
+    const i = s.turn, P = s.ps[i];
+    if (!P || P.out) return null;
+    const reserve = 150;
+    if (s.ph === 'buy') {
+      const q = s.pend, price = SQ[q].p;
+      const g = SQ[q].g;
+      const completes = g && GROUP[g].every((x) => x === q || (s.own[x] && s.own[x].o === i));
+      if (P.cash >= price && (P.cash - price >= reserve || (completes && P.cash - price >= 40))) return { t: 'buy' };
+      return { t: 'pass' };
+    }
+    if (s.ph === 'acq') {
+      return P.cash - acqPrice(s.pend) >= reserve ? { t: 'acq' } : { t: 'pass' };
+    }
+    if (s.ph === 'roll' || s.ph === 'end') {
+      const b = bestBuild(s, i, reserve + 50);
+      if (b >= 0) return { t: 'build', q: b };
+      const u = bestUnmort(s, i, 400);
+      if (u >= 0) return { t: 'unmort', q: u };
+      if (s.ph === 'roll') {
+        if (P.jail) {
+          if (P.cards > 0) return { t: 'useCard' };
+          if (P.cash >= BAIL + reserve && s.round < 15) return { t: 'bail' };
+        }
+        return { t: 'roll' };
+      }
+      return { t: 'end' };
+    }
+    return null;
+  }
+
+  return {
+    SQ, N, JAIL, HOUSE, RAILS, UTILS, GROUP, CARDS, TOKENS, BOT_NAMES, ROUND_OPTS,
+    START_CASH, GO_PAY, BAIL, MAX_P,
+    newTable, apply, botAct, netWorth, rentOf, ownsGroup, groupHouses,
+    canBuild, canSell, canMort, canUnmort, canAcquire, acqPrice, mortValue, unmortCost, cleanNick, clone, ACQ_RATE,
+    log: L,
+  };
+})();
+if (typeof module !== 'undefined' && module.exports) module.exports = MONO;
+
+</script>
+<script>
+(() => {
+  'use strict';
+  const E = MONO;
+  const $ = (sel) => document.querySelector(sel);
+  const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const randId = () => Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 8);
+  const store = {
+    get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* 浏览器不允许本地存储时忽略 */ } },
+  };
+  const CARD_MS = 2600;
+  const OFFLINE_MS = 40000;
+  const MINUS = '−';
+  const BROKERS = window.__GM_BROKERS || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt'];
+  const TOPIC_ROOT = 'globe-monopoly/v1';
+  const HOST_GONE_MS = 25000;
+  const PRESENCE_TTL = 50000;
+
+  const A = {
+    mode: 'boot',            // boot | landing | online | local
+    room: null, broker: 0, client: null, synced: false, creating: false, tabs: {},
+    hostGoneAt: 0, lastAnnounce: 0, lastTick: 0, syncTimer: null, connStart: 0, pendingCreate: null, libMissing: false,
+    myPid: null, tab: 'tab-' + randId(),
+    s: null, noTable: false, sentN: 0, pending: null,
+    peers: [], presentPids: new Set(), hostOnline: false, hostPid: null, connected: false, connLostAt: 0, roomSince: 0,
+    absentSince: {}, botTimer: null,
+    tokEls: new Map(), disp: {}, vq: Promise.resolve(), vqLen: 0, visualBusyUntil: 0, visualReady: false,
+    qRk: 0, qMvK: 0, qCardK: 0, lastLogK: 0, deedQ: -1, dlg: null, confirm: null, holdTimer: null, booted: false,
+    botReadyAt: 0, lastStateAt: 0, leasing: false, leaseErr: 0, tokTouched: false,
+  };
+
+  // ---------- 棋盘 ----------
+  const cells = [];
+  const sideOf = (q) => (q % 8 === 0 ? 'c' : q < 8 ? 'b' : q < 16 ? 'l' : q < 24 ? 't' : 'r');
+  function gridPos(q) {
+    if (q === 0) return [9, 9];
+    if (q < 8) return [9, 9 - q];
+    if (q === 8) return [9, 1];
+    if (q < 16) return [9 - (q - 8), 1];
+    if (q === 16) return [1, 1];
+    if (q < 24) return [1, 1 + (q - 16)];
+    if (q === 24) return [1, 9];
+    return [1 + (q - 24), 9];
+  }
+  function nameHTML(sq) {
+    if (sq.s) return `<span class="nm"><span class="full">${sq.n}</span><span class="short">${sq.s}</span></span>`;
+    return `<span class="nm">${sq.n}</span>`;
+  }
+  function cellInner(q) {
+    const sq = E.SQ[q];
+    switch (sq.t) {
+      case 'prop':
+        return `<div class="band" style="--gc:var(--g${sq.g})"><span class="code">${sq.c}</span><span class="pips"></span></div>` +
+          `<div class="body"><span class="code2">${sq.c}</span>${nameHTML(sq)}<span class="pr">$${sq.p}</span></div>`;
+      case 'rail': case 'util':
+        return `<div class="band ${sq.t}"><span class="code">${sq.c}</span></div>` +
+          `<div class="body"><span class="code2">${sq.c}</span>${nameHTML(sq)}<span class="pr">$${sq.p}</span></div>`;
+      case 'tax':
+        return `<div class="body"><span class="code2 always">TAX</span>${nameHTML(sq)}<span class="pr">$${sq.a}</span></div>`;
+      case 'chance':
+        return `<div class="body"><span class="glyph red">?</span>${nameHTML(sq)}</div>`;
+      case 'fate':
+        return `<div class="body"><span class="glyph blue">!</span>${nameHTML(sq)}</div>`;
+      case 'go':
+        return `<div class="corner go"><span class="stamp blue">起点</span><span class="sub">经过领 $${E.GO_PAY}</span><span class="arrow" aria-hidden="true">&larr;</span></div>`;
+      case 'jail':
+        return `<div class="corner jail"><div class="bars"></div><span class="nm">监狱</span><span class="sub">停这里只是探监</span></div>`;
+      case 'park':
+        return `<div class="corner park"><span class="nm">旅行基金</span><span class="pot" id="potCell">$0</span><span class="sub">税和罚款都存这</span></div>`;
+      case 'gojail':
+        return `<div class="corner gojail"><span class="stamp red">入狱</span><span class="sub">直接送进监狱</span></div>`;
+      default: return '';
+    }
+  }
+  function buildBoard() {
+    const grid = $('#grid'), center = $('#center');
+    E.SQ.forEach((sq, q) => {
+      const el = document.createElement('div');
+      const [r, c] = gridPos(q);
+      el.className = 'cell ' + sideOf(q);
+      el.style.gridRow = String(r);
+      el.style.gridColumn = String(c);
+      el.dataset.q = String(q);
+      el.setAttribute('role', 'button');
+      el.tabIndex = 0;
+      el.setAttribute('aria-label', sq.n + (sq.p ? '，地价 $' + sq.p : sq.a ? '，$' + sq.a : ''));
+      el.innerHTML = cellInner(q);
+      grid.insertBefore(el, center);
+      cells[q] = el;
+    });
+    const tkrow = $('#tkrow');
+    tkrow.innerHTML = E.TOKENS.map((t, i) => `<label class="tk" title="棋子 ${i + 1}"><input type="radio" name="tok" value="${i}" id="tok${i}" aria-label="棋子 ${i + 1}"><span aria-hidden="true">${t}</span></label>`).join('');
+    $('#cfgSeg').innerHTML = E.ROUND_OPTS.map((v) => `<button type="button" role="radio" aria-checked="false" data-act="cfg" data-v="${v}">${v ? v + ' 轮' : '不限'}</button>`).join('');
+    ['d0', 'd1'].forEach((id) => { $('#' + id).innerHTML = '<i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>'; });
+  }
+
+  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  function setDie(k, v) {
+    const el = $('#d' + k);
+    const on = PIPS[v] || [];
+    el.querySelectorAll('i').forEach((pip, idx) => pip.classList.toggle('on', on.includes(idx)));
+    el.classList.toggle('red', v === 1 || v === 4); // 中式骰子的一点和四点是红色
+    el.setAttribute('aria-label', v ? v + ' 点' : '');
+  }
+  function setDiceFaces(d) { setDie(0, d[0]); setDie(1, d[1]); }
+
+  // ---------- 小工具 ----------
+  const pc = (p) => `var(--p${(p.col || 0) + 1})`;
+  const sqName = (q) => E.SQ[q].n;
+  function toast(msg, kind) {
+    const el = document.createElement('div');
+    el.className = 'toast' + (kind === 'bad' ? ' bad' : '');
+    el.textContent = msg;
+    $('#toasts').appendChild(el);
+    setTimeout(() => el.remove(), 3600);
+  }
+  function localToken() {
+    let t = store.get('globe-mono.pid');
+    if (!t) { t = 'g-' + randId(); store.set('globe-mono.pid', t); }
+    return t;
+  }
+  function isHostNow() { return A.mode === 'online' && !!A.client && A.connected && A.synced && !!A.s && A.s.host === A.myPid; }
+  function meIdx(s) {
+    s = s || A.s;
+    if (!s) return -1;
+    if (A.mode === 'local') {
+      if (s.st === 'play') {
+        const cur = s.ps[s.turn];
+        if (cur && !cur.bot && !cur.out) return s.turn;
+      }
+      const m = s.ps.findIndex((p) => p.id === A.myPid);
+      if (m >= 0) return m;
+      return s.ps.findIndex((p) => !p.bot);
+    }
+    return s.ps.findIndex((p) => p.id === A.myPid);
+  }
+  function isMine(p) { return !!p && (A.mode === 'local' ? !p.bot : p.id === A.myPid); }
+  function canSend() {
+    if (A.mode === 'local') return true;
+    if (A.mode !== 'online' || !A.connected || !A.s) return false;
+    return isHostNow() || A.hostOnline;
+  }
+  function needsAuto(p) {
+    if (!p || p.out) return false;
+    if (p.bot || p.auto) return true;
+    if (A.mode !== 'online' || !A.connected) return false;
+    const t = A.absentSince[p.id];
+    return !!t && Date.now() - t > OFFLINE_MS;
+  }
+  function isOnline(p) {
+    if (A.mode === 'local' || p.bot) return true;
+    return A.presentPids.has(p.id);
+  }
+  function segText(seg, s) {
+    if (typeof seg === 'string') return seg;
+    if (seg.p != null) return s.ps[seg.p] ? s.ps[seg.p].nick : '某位玩家';
+    if (seg.q != null) return sqName(seg.q);
+    if (seg.m != null) return money(seg.m);
+    return '';
+  }
+  function segHTML(seg, s) {
+    if (typeof seg === 'string') return esc(seg);
+    if (seg.p != null) {
+      const p = s.ps[seg.p];
+      return p ? `<b class="pn" style="--pc:${pc(p)}">${esc(p.nick)}</b>` : '某位玩家';
+    }
+    if (seg.q != null) {
+      const q = E.SQ[seg.q];
+      return `<span class="sq" style="--gc:${q.g ? `var(--g${q.g})` : 'var(--ink-3)'}">${esc(q.n)}</span>`;
+    }
+    if (seg.m != null) return `<span class="mo">${money(seg.m)}</span>`;
+    return '';
+  }
+
+  // ---------- 棋子位置与动画 ----------
+  const SLOTS = {
+    1: [[0, 0]], 2: [[-0.22, 0], [0.22, 0]], 3: [[-0.22, -0.15], [0.22, -0.15], [0, 0.2]],
+    4: [[-0.21, -0.17], [0.21, -0.17], [-0.21, 0.19], [0.21, 0.19]],
+    5: [[-0.25, -0.17], [0, -0.17], [0.25, -0.17], [-0.13, 0.19], [0.13, 0.19]],
+    6: [[-0.25, -0.17], [0, -0.17], [0.25, -0.17], [-0.25, 0.19], [0, 0.19], [0.25, 0.19]],
+  };
+  function cellCenter(q) {
+    const c = cells[q];
+    return { x: c.offsetLeft + c.offsetWidth / 2, y: c.offsetTop + c.offsetHeight / 2, m: Math.min(c.offsetWidth, c.offsetHeight) };
+  }
+  let TS = 18;
+  function sizeTokens() {
+    const c = cells[1];
+    if (!c) return;
+    const m = Math.min(c.offsetWidth, c.offsetHeight);
+    TS = Math.max(14, Math.min(28, Math.round(m * 0.46)));
+    $('#grid').style.setProperty('--ts', TS + 'px');
+  }
+  // 第 k 枚棋子（共 n 枚）在格子 q 上的位置。普通格子把棋子排在朝向棋盘中心的色带上，不挡城市名
+  function slotXY(q, k, n) {
+    const c = cells[q];
+    const L = c.offsetLeft, T = c.offsetTop, W = c.offsetWidth, H = c.offsetHeight;
+    const side = sideOf(q);
+    if (side === 'c') {
+      const sl = (SLOTS[Math.min(n, 6)] || SLOTS[1])[k] || [0, 0];
+      const m = Math.min(W, H);
+      return [L + W / 2 + sl[0] * m, T + H / 2 + sl[1] * m];
+    }
+    const horiz = side === 'b' || side === 't';
+    const along = horiz ? W : H;
+    const row = k < 3 ? 0 : 1;
+    const inRow = row === 0 ? Math.min(n, 3) : n - 3;
+    const idx = row === 0 ? k : k - 3;
+    const step = Math.min(TS * 0.95, along * 0.32);
+    const a = (idx - (inRow - 1) / 2) * step;
+    const depth = TS * 0.55 + row * TS * 0.9;
+    if (side === 'b') return [L + W / 2 + a, T + depth];
+    if (side === 't') return [L + W / 2 + a, T + H - depth];
+    if (side === 'l') return [L + W - depth, T + H / 2 + a];
+    return [L + depth, T + H / 2 + a];
+  }
+  function tokenEl(p) {
+    let el = A.tokEls.get(p.id);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'tok';
+      el.appendChild(document.createElement('span'));
+      $('#tokens').appendChild(el);
+      A.tokEls.set(p.id, el);
+    }
+    el.style.setProperty('--pc', pc(p));
+    el.firstChild.textContent = E.TOKENS[p.tok] || '';
+    return el;
+  }
+  function boardPlayers(s) {
+    if (!s) return [];
+    return s.ps.filter((p) => !p.out);
+  }
+  function layoutTokens(s, skipId) {
+    if (!s) return;
+    sizeTokens();
+    const list = boardPlayers(s);
+    const keep = new Set(list.map((p) => p.id));
+    for (const [id, el] of A.tokEls) if (!keep.has(id)) { el.remove(); A.tokEls.delete(id); }
+    const groups = {};
+    list.forEach((p) => {
+      if (A.disp[p.id] == null) A.disp[p.id] = p.pos;
+      if (p.id === skipId) return;
+      (groups[A.disp[p.id]] = groups[A.disp[p.id]] || []).push(p);
+    });
+    const cur = s.st === 'play' ? s.ps[s.turn] : null;
+    for (const q in groups) {
+      const g = groups[q];
+      g.forEach((p, k) => {
+        const el = tokenEl(p);
+        const [x, y] = slotXY(+q, k, g.length);
+        el.style.transform = `translate(${x}px, ${y}px)`;
+        el.classList.toggle('cur', !!cur && cur.id === p.id);
+      });
+    }
+    if (skipId) {
+      const p = list.find((x) => x.id === skipId);
+      if (p) tokenEl(p).classList.toggle('cur', !!cur && cur.id === p.id);
+    }
+  }
+  function moveTokTo(el, q) {
+    const [x, y] = slotXY(q, 0, 1);
+    el.style.transform = `translate(${x}px, ${y}px)`;
+  }
+  function hop(el) {
+    el.classList.remove('hop');
+    void el.offsetWidth;
+    el.classList.add('hop');
+  }
+  function flashCell(q) {
+    const c = cells[q];
+    if (!c) return;
+    c.classList.remove('flash');
+    void c.offsetWidth;
+    c.classList.add('flash');
+  }
+  function pathSteps(mv) {
+    let cur = mv.from, n = 0;
+    for (const seg of mv.path) {
+      if (seg.c) continue;
+      if (seg.w === 0) { n += 2; cur = seg.to; continue; }
+      const d = seg.w === 1 ? (seg.to - cur + E.N) % E.N : (cur - seg.to + E.N) % E.N;
+      n += d; cur = seg.to;
+    }
+    return n;
+  }
+  const stepMs = (n) => Math.max(70, Math.min(170, 1600 / Math.max(1, n)));
+  function jobCost(job) {
+    if (document.visibilityState === 'hidden') return 0;
+    if (RM) return job.card ? CARD_MS : 0;
+    let t = 0;
+    if (job.roll) t += 720;
+    if (job.mv) { const n = pathSteps(job.mv); t += n * stepMs(n) + 260; }
+    if (job.card) t += CARD_MS + 150;
+    return t;
+  }
+  async function rollDice(d, fast) {
+    const dice = $('#dice');
+    dice.hidden = false;
+    if (RM || fast) { setDiceFaces(d); return; }
+    dice.classList.add('rolling');
+    const t0 = Date.now();
+    while (Date.now() - t0 < 560) {
+      setDie(0, 1 + Math.floor(Math.random() * 6));
+      setDie(1, 1 + Math.floor(Math.random() * 6));
+      await sleep(70);
+    }
+    dice.classList.remove('rolling');
+    setDiceFaces(d);
+    await sleep(140);
+  }
+  function showCard(card, s) {
+    return new Promise((resolve) => {
+      const c = E.CARDS[card.d] && E.CARDS[card.d][card.i];
+      const p = s.ps[card.p];
+      if (!c) { resolve(); return; }
+      const box = $('#postcard');
+      $('#pcWho').textContent = (p ? (E.TOKENS[p.tok] || '') + ' ' + p.nick : '') + ' 抽到一张卡';
+      const st = $('#pcStamp');
+      st.textContent = card.d === 'C' ? '机会' : '命运';
+      st.className = 'pc-stamp ' + card.d;
+      $('#pcText').textContent = c.x;
+      box.hidden = false;
+      let done = false;
+      const finish = () => { if (done) return; done = true; box.hidden = true; box.removeEventListener('click', finish); resolve(); };
+      box.addEventListener('click', finish);
+      setTimeout(finish, CARD_MS);
+    });
+  }
+  async function walk(mv, s, card) {
+    const p = s.ps[mv.p];
+    if (!p) return;
+    const el = tokenEl(p);
+    let cur = mv.from;
+    A.disp[p.id] = cur;
+    layoutTokens(A.s, p.id);
+    moveTokTo(el, cur);
+    el.classList.add('moving');
+    const ms = stepMs(pathSteps(mv));
+    for (const seg of mv.path) {
+      if (seg.c) {
+        if (card) await showCard(card, s);
+        card = null;
+        continue;
+      }
+      if (seg.w === 0) { cur = seg.to; moveTokTo(el, cur); hop(el); await sleep(300); continue; }
+      while (cur !== seg.to) {
+        cur = (cur + (seg.w === 1 ? 1 : -1) + E.N) % E.N;
+        moveTokTo(el, cur); hop(el);
+        await sleep(ms);
+      }
+    }
+    if (card) await showCard(card, s);
+    el.classList.remove('moving');
+    A.disp[p.id] = cur;
+    flashCell(cur);
+  }
+  function showDeltas(prev, s) {
+    if (!prev || prev.gid !== s.gid || s.st !== 'play' || prev.st !== 'play') return;
+    const grid = $('#grid');
+    s.ps.forEach((p) => {
+      const old = prev.ps.find((x) => x.id === p.id);
+      if (!old) return;
+      const d = p.cash - old.cash;
+      if (!d) return;
+      const q = A.disp[p.id] != null ? A.disp[p.id] : p.pos;
+      const [x, y] = slotXY(q, 0, 1);
+      const f = document.createElement('div');
+      f.className = 'floater' + (d < 0 ? ' neg' : '');
+      f.textContent = (d > 0 ? '+' : MINUS) + money(Math.abs(d));
+      f.style.left = x + 'px';
+      f.style.top = (y - TS) + 'px';
+      grid.appendChild(f);
+      setTimeout(() => f.remove(), 1700);
+      const cashEl = document.querySelector(`.pax[data-id="${CSS.escape(p.id)}"] .pcash`);
+      if (cashEl) { cashEl.classList.remove('bump'); void cashEl.offsetWidth; cashEl.classList.add('bump'); }
+    });
+  }
+  function queueVisual(prev, ns) {
+    const fresh = !A.visualReady || !prev || prev.gid !== ns.gid;
+    if (fresh) {
+      A.qRk = ns.rk; A.qMvK = ns.mv ? ns.mv.k : 0; A.qCardK = ns.card ? ns.card.k : 0;
+      A.disp = {};
+      ns.ps.forEach((p) => { A.disp[p.id] = p.pos; });
+      setDiceFaces(ns.dice);
+      if (A.vqLen === 0) layoutTokens(ns);
+      A.visualReady = true;
+      return;
+    }
+    const job = {
+      prev, s: ns,
+      roll: ns.rk > 0 && ns.rk !== A.qRk,
+      mv: ns.mv && ns.mv.k > A.qMvK ? ns.mv : null,
+      card: ns.card && ns.card.k > A.qCardK ? ns.card : null,
+    };
+    A.qRk = ns.rk;
+    if (ns.mv) A.qMvK = Math.max(A.qMvK, ns.mv.k);
+    if (ns.card) A.qCardK = Math.max(A.qCardK, ns.card.k);
+    const cost = jobCost(job);
+    A.visualBusyUntil = Math.max(A.visualBusyUntil, Date.now()) + cost;
+    A.vqLen++;
+    const fast = A.vqLen > 3 || document.visibilityState === 'hidden';
+    A.vq = A.vq.then(() => runVisual(job, fast)).catch((e) => console.warn(e)).then(() => {
+      A.vqLen--;
+      if (A.vqLen === 0) { A.visualBusyUntil = Math.min(A.visualBusyUntil, Date.now()); layoutTokens(A.s); }
+      renderCenter();
+      if (A.deedQ >= 0) renderDeed();
+      scheduleBot();
+    });
+  }
+  async function runVisual(job, fast) {
+    const s = job.s;
+    if (job.roll) await rollDice(s.dice, fast);
+    else setDiceFaces(s.dice);
+    if (job.mv && !fast && !RM) await walk(job.mv, s, job.card);
+    else if (job.card && !fast) await showCard(job.card, s);
+    s.ps.forEach((p) => { A.disp[p.id] = p.pos; });
+    layoutTokens(A.s || s);
+    if (!fast) showDeltas(job.prev, s);
+  }
+
+  // ---------- 渲染 ----------
+  function renderAll() {
+    renderTop();
+    renderNotice();
+    renderStart();
+    renderBoard();
+    renderCenter();
+    renderLobby();
+    renderMine();
+    renderPax();
+    renderLog();
+    if (A.deedQ >= 0) renderDeed();
+    if (A.vqLen === 0) layoutTokens(A.s);
+  }
+
+  function renderTop() {
+    const el = $('#conn'), t = $('#connTxt');
+    let cls = '', txt = '';
+    const n = A.presentPids.size;
+    if (A.mode === 'boot' || A.mode === 'landing') txt = '还没进入房间';
+    else if (A.mode === 'local') txt = '单机模式';
+    else if (!A.connected) { cls = 'warn'; txt = A.connLostAt ? '重新连接中…' : '正在连接…'; }
+    else if (isHostNow()) { cls = 'ok'; txt = `房间 ${A.room} · ${n} 人在线 · 你在主持`; }
+    else if (A.hostOnline) { cls = 'ok'; txt = `房间 ${A.room} · ${n} 人在线`; }
+    else if (A.s) { cls = 'warn'; txt = `房间 ${A.room} · 主持人离线`; }
+    else { cls = 'warn'; txt = `房间 ${A.room}`; }
+    el.className = 'conn ' + cls;
+    t.textContent = txt;
+  }
+
+  function renderNotice() {
+    const el = $('#notice');
+    let msg = '';
+    const since = Date.now() - (A.connStart || 0);
+    if (A.mode === 'local') msg = '单机模式：在这台设备上和电脑玩家、或者身边的人轮流玩。想和朋友联机，点「退出单机」后创建房间。';
+    else if (A.mode === 'online' && A.libMissing) msg = '实时连接组件没有加载成功，请刷新页面再试。';
+    else if (A.mode === 'online' && !A.connected && since > 8000) msg = '连不上实时服务器，页面会自动重试。如果一直连不上，可能是当前网络屏蔽了这个服务器，可以换个网络（比如切到手机流量）再试。';
+    else if (A.mode === 'online' && A.connected && A.synced && A.s && !A.hostOnline && !isHostNow() && since > 5000) msg = '主持人暂时离线。25 秒后会由在线的玩家自动接手，游戏可以继续。';
+    el.hidden = !msg;
+    if (msg) el.innerHTML = `<b>提示</b><span>${esc(msg)}</span>`;
+  }
+
+  function renderStart() {
+    $('#startSec').hidden = !(A.mode === 'landing' || A.mode === 'boot');
+    $('#logSec').hidden = !A.s;
+    $('#inviteBtn').hidden = A.mode !== 'online';
+    const lb = $('#leaveBtn');
+    lb.hidden = !(A.mode === 'online' || A.mode === 'local');
+    lb.textContent = A.mode === 'local' ? '退出单机' : '离开房间';
+  }
+
+  function landingHTML() {
+    return `<div class="landing"><div class="c-big">开一桌吧</div>` +
+      `<p class="c-sub">开个房间，把链接发给朋友，打开就能一起玩，不用注册。</p>` +
+      `<div class="land-btns"><button class="btn danger" type="button" data-act="createRoom">创建房间</button><button class="btn" type="button" data-act="playLocal">单机试玩</button></div>` +
+      `<form class="join-room" id="joinRoomForm" autocomplete="off"><input type="text" id="roomCode" maxlength="12" placeholder="有房间号？输入后加入" aria-label="房间号"><button class="btn" type="submit">加入</button></form></div>`;
+  }
+
+  function renderBoard() {
+    const s = A.s;
+    cells.forEach((c, q) => {
+      const sq = E.SQ[q];
+      if (!['prop', 'rail', 'util'].includes(sq.t)) return;
+      const o = s && s.own[q];
+      const owner = o && s.ps[o.o];
+      if (owner) { c.dataset.own = '1'; c.style.setProperty('--oc', pc(owner)); } else { delete c.dataset.own; c.style.removeProperty('--oc'); }
+      c.classList.toggle('mort', !!(o && o.m));
+      c.classList.toggle('offer', !!(s && s.st === 'play' && (s.ph === 'buy' || s.ph === 'acq') && s.pend === q));
+      if (sq.t === 'prop') {
+        const band = c.querySelector('.band'), pips = c.querySelector('.pips');
+        const h = o ? o.h : 0;
+        band.classList.toggle('has-h', h > 0);
+        pips.innerHTML = h === 5 ? '<i class="pip hotel"></i>' : '<i class="pip"></i>'.repeat(h);
+      }
+      const lab = sq.n + '，地价 $' + sq.p + (owner ? '，属于 ' + owner.nick : '，无人拥有') + (o && o.m ? '，已抵押' : '') + (o && o.h ? (o.h === 5 ? '，有酒店' : `，${o.h} 栋房屋`) : '');
+      c.setAttribute('aria-label', lab);
+    });
+    const pot = $('#potCell');
+    if (pot) pot.textContent = money(s ? s.pot : 0);
+  }
+
+  function tagHTML(p, s) {
+    const t = [];
+    if (isMine(p) && A.mode !== 'local') t.push('<span class="tag you">你</span>');
+    if (p.bot) t.push('<span class="tag">电脑</span>');
+    if (!p.bot && p.auto) t.push('<span class="tag">托管</span>');
+    if (s.st === 'play' && p.jail) t.push('<span class="tag warn">监狱</span>');
+    if (p.out) t.push('<span class="tag bad">破产</span>');
+    if (A.mode === 'online' && !p.bot && !p.out && !isOnline(p)) t.push('<span class="tag warn">离线</span>');
+    if (A.mode === 'online' && A.hostPid && A.hostPid === p.id) t.push('<span class="tag host">主持</span>');
+    return t.join('');
+  }
+
+  function renderCenter() {
+    const s = A.s;
+    const meta = $('#cMeta'), main = $('#cMain'), acts = $('#actions'), dice = $('#dice');
+    if (!s) {
+      meta.innerHTML = '';
+      dice.hidden = true;
+      if (A.mode === 'landing' || A.mode === 'boot') {
+        if (main.dataset.view !== 'landing') { main.innerHTML = landingHTML(); main.dataset.view = 'landing'; }
+        acts.innerHTML = '';
+        return;
+      }
+      main.dataset.view = '';
+      let msg = '正在进入房间…', btn = '';
+      if (A.libMissing) msg = '实时连接组件没有加载成功，请刷新页面再试。';
+      else if (!A.connected) msg = A.connStart && Date.now() - A.connStart > 8000 ? '连不上实时服务器，正在重试…' : '正在连接实时服务器…';
+      else if (A.noTable) { msg = '这个房间里还没有牌桌，可能链接不完整，或者房间已经过期。'; btn = '<button class="btn danger" type="button" data-act="createHere">在这个房间开一桌</button>'; }
+      main.innerHTML = `<p class="c-wait">${msg}</p>`;
+      acts.innerHTML = btn;
+      return;
+    }
+    main.dataset.view = '';
+    const me = meIdx(s);
+    const seated = me >= 0;
+    const sendOK = canSend();
+    const pend = !!A.pending;
+    const dis = pend || !sendOK ? ' disabled' : '';
+    const busyLabel = pend ? '<span class="busy-dot" aria-hidden="true"></span>' : '';
+
+    if (s.st === 'lobby') {
+      meta.innerHTML = `<span>回合上限 <b>${s.maxR ? s.maxR : '不限'}</b>${s.maxR ? ' 轮' : ''}</span><span>起始现金 <b>${money(E.START_CASH)}</b></span>`;
+      dice.hidden = true;
+      const chips = s.ps.map((p) => `<span class="chip-tok" style="--pc:${pc(p)}" title="${esc(p.nick)}">${E.TOKENS[p.tok] || ''}</span>`).join('');
+      main.innerHTML = `<div class="c-big">候机中</div><p class="c-sub">已入座 ${s.ps.length} / ${E.MAX_P} 位 · 至少 2 位才能开局</p>${chips ? `<div class="c-seats">${chips}</div>` : ''}`;
+      if (seated && s.ps.length >= 2) acts.innerHTML = `<button class="btn danger" type="button" data-act="start"${dis}>${busyLabel}开始游戏</button>`;
+      else if (seated) acts.innerHTML = `<p class="c-wait">等朋友入座，或在候机室添加电脑玩家</p>`;
+      else acts.innerHTML = `<p class="c-wait">在「候机室」填昵称入座</p>`;
+      return;
+    }
+
+    if (s.st === 'over') {
+      meta.innerHTML = `<span>共 <b>${s.round}</b> 轮</span>`;
+      dice.hidden = true;
+      const why = s.why === 'rounds' ? '回合数已到，按总资产排名' : s.why === 'early' ? '提前结算，按总资产排名' : '其他玩家都破产了';
+      const rows = (s.rank || []).slice(0, 3).map((i, k) => {
+        const p = s.ps[i];
+        return `<li><span class="rk">${k + 1}</span><span class="chip-tok" style="--pc:${pc(p)}">${E.TOKENS[p.tok] || ''}</span><span class="nn">${esc(p.nick)}</span><span class="ww">${money(s.worth ? s.worth[i] : 0)}</span></li>`;
+      }).join('');
+      const w = s.ps[s.win];
+      main.innerHTML = `<div class="c-big">${w ? esc(w.nick) + ' 获胜' : '对局结束'}</div><p class="c-sub">${why}</p><ol class="podium">${rows}</ol>`;
+      acts.innerHTML = seated ? `<button class="btn primary" type="button" data-act="reset"${dis}>${busyLabel}回候机室，再来一局</button>` : '';
+      return;
+    }
+
+    // 对局中
+    meta.innerHTML = `<span>第 <b>${s.round}</b>${s.maxR ? ' / ' + s.maxR : ''} 轮</span><span>旅行基金 <b>${money(s.pot)}</b></span>`;
+    dice.hidden = false;
+    const cur = s.ps[s.turn];
+    const mine = isMine(cur);
+    let status = '';
+    if (s.ph === 'roll') status = cur.jail ? `在监狱里 · 已尝试 ${cur.jt} 次` : s.extra ? '掷出双数，再掷一次' : '准备掷骰子';
+    else if (s.ph === 'buy') status = `停在${sqName(s.pend)} · 售价 ${money(E.SQ[s.pend].p)}`;
+    else if (s.ph === 'acq') status = `可收购${sqName(s.pend)} · ${money(E.acqPrice(s.pend))}`;
+    else status = '本回合已行动';
+    const label = mine ? (A.mode === 'local' ? `轮到 ${cur.nick}` : '轮到你了') : '当前回合';
+    const last = s.log[s.log.length - 1];
+    main.innerHTML =
+      `<div class="pass" style="--pc:${pc(cur)}"><div class="pass-stub"><span class="pass-tok">${E.TOKENS[cur.tok] || ''}</span></div>` +
+      `<div class="pass-main"><div class="pass-label${mine ? ' me' : ''}">${esc(label)}</div>` +
+      `<div class="pass-name"><span>${esc(cur.nick)}</span><span class="tags">${tagHTML(cur, s)}</span></div>` +
+      `<div class="pass-row"><span class="pass-cash">${money(cur.cash)}</span><span class="pass-status">${esc(status)}</span></div></div></div>` +
+      (last ? `<div class="ticker">${last.s.map((g) => segHTML(g, s)).join('')}</div>` : '');
+
+    const animating = A.vqLen > 0 || Date.now() < A.visualBusyUntil;
+    if (animating) {
+      acts.innerHTML = '';
+      clearTimeout(A.holdTimer);
+      A.holdTimer = setTimeout(renderCenter, Math.max(120, A.visualBusyUntil - Date.now() + 60));
+      return;
+    }
+    if (!mine) {
+      let w = `等待 ${esc(cur.nick)} 行动…`;
+      if (cur.bot) w = `${esc(cur.nick)} 正在思考…`;
+      else if (cur.auto) w = `${esc(cur.nick)} 已托管，电脑代打`;
+      else if (A.mode === 'online' && !isOnline(cur)) w = `${esc(cur.nick)} 离线了，稍后由电脑代打`;
+      if (!seated && A.mode !== 'local') w += ' · 你在观战';
+      acts.innerHTML = `<p class="c-wait">${w}</p>`;
+      return;
+    }
+    if (!sendOK) { acts.innerHTML = '<p class="c-wait">主持人不在线，暂时不能操作</p>'; return; }
+    let h = '';
+    if (s.ph === 'roll') {
+      if (cur.jail) {
+        h += `<button class="btn primary" type="button" data-act="roll"${dis}>${busyLabel}掷骰子（双数出狱）</button>`;
+        h += `<button class="btn" type="button" data-act="bail"${dis || (cur.cash < E.BAIL ? ' disabled' : '')}>交 <span class="mo">$${E.BAIL}</span> 出狱</button>`;
+        if (cur.cards > 0) h += `<button class="btn" type="button" data-act="useCard"${dis}>用免签通行证</button>`;
+      } else {
+        h += `<button class="btn primary" type="button" data-act="roll"${dis}>${busyLabel}掷骰子</button>`;
+      }
+    } else if (s.ph === 'buy') {
+      const price = E.SQ[s.pend].p;
+      h += `<button class="btn danger" type="button" data-act="buy"${dis || (cur.cash < price ? ' disabled' : '')}>${busyLabel}买下 · <span class="mo">${money(price)}</span></button>`;
+      h += `<button class="btn" type="button" data-act="pass"${dis}>不买</button>`;
+    } else if (s.ph === 'acq') {
+      const price = E.acqPrice(s.pend);
+      h += `<button class="btn danger" type="button" data-act="acq"${dis || (cur.cash < price ? ' disabled' : '')}>${busyLabel}收购 · <span class="mo">${money(price)}</span></button>`;
+      h += `<button class="btn" type="button" data-act="pass"${dis}>不收购</button>`;
+    } else if (s.ph === 'end') {
+      h += `<button class="btn primary" type="button" data-act="end"${dis}>${busyLabel}结束回合</button>`;
+    }
+    acts.innerHTML = h;
+  }
+
+  function renderLobby() {
+    const s = A.s;
+    const sec = $('#lobbySec');
+    const show = !!s && s.st === 'lobby';
+    sec.hidden = !show;
+    if (!show) return;
+    const me = meIdx(s);
+    const seated = me >= 0;
+    const canAct = canSend();
+    $('#seatCount').textContent = `${s.ps.length} / ${E.MAX_P}`;
+    $('#seats').innerHTML = s.ps.length ? s.ps.map((p, i) => {
+      const kick = seated && canAct && i !== me ? `<button class="x-btn" type="button" data-act="kick" data-i="${i}" aria-label="请 ${esc(p.nick)} 离座" title="请离座">&times;</button>` : '<span></span>';
+      return `<li class="seat"><span class="ptok" style="--pc:${pc(p)}">${E.TOKENS[p.tok] || ''}</span><span class="pmain"><span class="pname"><span>${esc(p.nick)}</span><span class="tags">${tagHTML(p, s)}</span></span></span>${kick}</li>`;
+    }).join('') : '<li class="empty">还没有人入座。</li>';
+
+    const form = $('#joinForm');
+    form.hidden = !seated && s.ps.length >= E.MAX_P;
+    const mine = seated ? s.ps[me] : null;
+    const nick = $('#nick');
+    if (mine && document.activeElement !== nick && !nick.dataset.touched) nick.value = mine.nick;
+    E.TOKENS.forEach((t, i) => {
+      const inp = $('#tok' + i);
+      const takenBy = s.ps.find((p) => p.tok === i);
+      inp.disabled = !!takenBy && !(mine && takenBy.id === mine.id);
+      if (mine && !A.tokTouched) inp.checked = mine.tok === i;
+    });
+    const anyChecked = E.TOKENS.some((t, i) => $('#tok' + i).checked && !$('#tok' + i).disabled);
+    if (!anyChecked) {
+      const free = E.TOKENS.findIndex((t, i) => !$('#tok' + i).disabled);
+      if (free >= 0) $('#tok' + free).checked = true;
+    }
+    const jb = $('#joinBtn');
+    jb.textContent = seated ? (A.mode === 'local' ? '保存我的昵称' : '保存修改') : '入座';
+    jb.disabled = !canAct || !!A.pending;
+    $('#addLocalBtn').hidden = !(A.mode === 'local' && seated && s.ps.length < E.MAX_P);
+
+    let tools = '';
+    if (seated && canAct) {
+      if (s.ps.length < E.MAX_P) tools += `<button class="btn small" type="button" data-act="addBot">添加电脑玩家</button>`;
+      if (A.mode !== 'local') tools += `<button class="btn small" type="button" data-act="leave">离座</button>`;
+    }
+    $('#lobbyTools').innerHTML = tools;
+    $('#lobbyTools').hidden = !tools;
+    document.querySelectorAll('#cfgSeg button').forEach((b) => {
+      b.setAttribute('aria-checked', String(+b.dataset.v === s.maxR));
+      b.disabled = !(seated && canAct);
+    });
+    let hint = '';
+    if (!seated) hint = '填好昵称、选个棋子，点「入座」。';
+    else if (s.ps.length < 2) hint = '至少 2 位玩家才能开局。人不够可以先添加电脑玩家。';
+    else hint = '人齐了就点棋盘中间的「开始游戏」。入座的人都可以开局。';
+    $('#lobbyHint').textContent = hint;
+  }
+
+  function renderMine() {
+    const s = A.s;
+    const sec = $('#mineSec');
+    const me = meIdx(s);
+    const show = !!s && s.st === 'play' && me >= 0;
+    sec.hidden = !show;
+    if (!show) return;
+    const P = s.ps[me];
+    const body = $('#mineBody');
+    sec.querySelector('h2').textContent = A.mode === 'local' ? `${P.nick} 的资产` : '我的资产';
+    if (P.out) {
+      $('#mineCount').textContent = '';
+      body.innerHTML = '<p class="empty">你已经出局了，可以继续观战。</p>';
+      return;
+    }
+    const mineProps = Object.keys(s.own).map(Number).filter((q) => s.own[q].o === me).sort((a, b) => a - b);
+    $('#mineCount').textContent = `${mineProps.length} 处地产`;
+    const rows = mineProps.map((q) => {
+      const o = s.own[q], sq = E.SQ[q];
+      let st = o.m ? '已抵押' : o.h === 5 ? '酒店' : o.h ? `${o.h} 栋房屋` : sq.t === 'prop' && E.ownsGroup(s, me, sq.g) ? '已集齐，可盖房' : sq.t === 'rail' ? '交通站' : sq.t === 'util' ? '公用事业' : '空地';
+      const gc = sq.g ? `var(--g${sq.g})` : sq.t === 'rail' ? 'var(--air-blue)' : 'var(--ink-2)';
+      return `<li><button class="prop-row${o.m ? ' mort' : ''}" type="button" data-act="deed" data-q="${q}"><span class="chip" style="--gc:${gc}"></span><span class="pn2"><b>${esc(sq.n)}</b><small>${st}</small></span></button></li>`;
+    }).join('');
+    const isTurn = s.turn === me;
+    const tools = [];
+    tools.push(`<label class="toggle"><input type="checkbox" id="autoBox" data-act="auto"${P.auto ? ' checked' : ''}${canSend() && !A.pending ? '' : ' disabled'}>托管（电脑代打）</label>`);
+    let confirm = '';
+    if (A.confirm === 'resign') confirm = `<div class="confirm"><span>认输后你的地产收归银行，确定吗？</span><button class="btn small danger" type="button" data-act="resign-yes">确定认输</button><button class="btn small" type="button" data-act="cancel">取消</button></div>`;
+    if (A.confirm === 'endGame') confirm = `<div class="confirm"><span>马上按总资产结算并结束本局，确定吗？</span><button class="btn small danger" type="button" data-act="endGame-yes">确定结算</button><button class="btn small" type="button" data-act="cancel">取消</button></div>`;
+    const btns = [`<button class="btn small" type="button" data-act="resign"${canSend() ? '' : ' disabled'}>认输</button>`];
+    if (s.starter === P.id) btns.push(`<button class="btn small" type="button" data-act="endGame"${canSend() ? '' : ' disabled'}>提前结算</button>`);
+    body.innerHTML =
+      `<div class="mine-top"><span class="mine-cash">${money(P.cash)}</span><span class="mine-meta">总资产 ${money(E.netWorth(s, me))}${P.cards ? ` · 免签通行证 ${P.cards} 张` : ''}</span></div>` +
+      (rows ? `<ul class="props">${rows}</ul>` : '<p class="empty">还没有地产。停在没人买的城市就可以买下。</p>') +
+      (rows && isTurn ? '<p class="hint">点地产可以盖房、卖房、抵押或赎回。只能在自己的回合操作。</p>' : rows ? '<p class="hint">轮到你时，点地产可以盖房或抵押。</p>' : '') +
+      `<div class="row">${tools.join('')}</div><div class="row">${btns.join('')}</div>${confirm}`;
+  }
+
+  function renderPax() {
+    const s = A.s;
+    const sec = $('#paxSec');
+    const show = !!s && s.st !== 'lobby';
+    sec.hidden = !show;
+    if (!show) return;
+    const alive = s.ps.filter((p) => !p.out).length;
+    $('#paxCount').textContent = `${alive} / ${s.ps.length} 在场`;
+    const order = s.st === 'over' && s.rank ? s.rank : s.ps.map((p, i) => i);
+    $('#pax').innerHTML = order.map((i) => {
+      const p = s.ps[i];
+      const props = Object.keys(s.own).filter((q) => s.own[q].o === i);
+      const houses = props.reduce((n, q) => n + (s.own[q].h || 0), 0);
+      const isCur = s.st === 'play' && s.turn === i;
+      const sub = s.st === 'over' ? `总资产 ${money(s.worth ? s.worth[i] : 0)}` : `${props.length} 处地产${houses ? ` · ${houses} 栋房` : ''} · 在${sqName(p.pos)}`;
+      return `<li class="pax${isCur ? ' cur' : ''}${p.out ? ' out' : ''}" data-id="${esc(p.id)}" style="--pc:${pc(p)}"><span class="ptok">${E.TOKENS[p.tok] || ''}</span><span class="pmain"><span class="pname"><span>${esc(p.nick)}</span><span class="tags">${tagHTML(p, s)}</span></span><span class="psub">${esc(sub)}</span></span><span class="pcash">${money(p.cash)}</span></li>`;
+    }).join('');
+  }
+
+  function renderLog() {
+    const s = A.s;
+    if (!s) return;
+    const list = $('#log');
+    const items = s.log.slice(-40).reverse();
+    list.innerHTML = items.length ? items.map((e) => `<li${e.k > A.lastLogK ? ' class="new"' : ''}>${e.s.map((g) => segHTML(g, s)).join('')}</li>`).join('') : '<li>还没有动态。</li>';
+    const newest = s.log[s.log.length - 1];
+    if (newest && newest.k > A.lastLogK) {
+      if (A.lastLogK) $('#live').textContent = newest.s.map((g) => segText(g, s)).join('');
+      A.lastLogK = newest.k;
+    }
+  }
+
+  // ---------- 地契弹层 ----------
+  function openDeed(q) { A.deedQ = q; renderDeed(); $('#sheetBg').hidden = false; const b = $('#sheet .sheet-close'); if (b) b.focus(); }
+  function closeDeed() { A.deedQ = -1; $('#sheetBg').hidden = true; }
+  const DESC = {
+    go: `每次经过或停在起点，领取 $${E.GO_PAY}。`,
+    jail: '停在这里只是探监。被送进监狱时，可以交 $50、用免签通行证，或在自己回合掷出双数出狱；连续三次没掷出双数会自动交保释金出狱。',
+    park: '所有税款、罚款和保释金都会存进旅行基金。停在这里的人把基金全部领走。',
+    gojail: '直接送进监狱，不经过起点，本回合结束。',
+    chance: '抽一张机会卡：可能前往某座城市、拿到奖金，也可能被罚款。',
+    fate: '抽一张命运卡：可能收钱、付钱，或者拿到免签通行证。',
+  };
+  function renderDeed() {
+    const q = A.deedQ, s = A.s;
+    if (q < 0) return;
+    const sq = E.SQ[q];
+    const o = s && s.own[q];
+    const owner = o && s.ps[o.o];
+    let headStyle = '', code = sq.c || '';
+    if (sq.t === 'prop') headStyle = `--gc:var(--g${sq.g});--hc:var(--on-color)`;
+    else if (sq.t === 'rail') headStyle = '--gc:var(--air-blue);--hc:var(--on-color)';
+    else if (sq.t === 'util') headStyle = '--gc:var(--ink-2);--hc:var(--on-color)';
+    else if (sq.t === 'tax') code = 'TAX';
+    const price = sq.p ? `地价 ${money(sq.p)}` : sq.a ? `缴纳 ${money(sq.a)}` : '';
+    let body = '';
+    if (sq.t === 'prop') {
+      const lv = o ? (o.h || 0) : -1;
+      const full = o ? E.ownsGroup(s, o.o, sq.g) : false;
+      const rows = [
+        ['无房屋', sq.r[0], lv === 0 && !full], ['集齐同色，无房屋', sq.r[0] * 2, lv === 0 && full],
+        ['1 栋房屋', sq.r[1], lv === 1], ['2 栋房屋', sq.r[2], lv === 2], ['3 栋房屋', sq.r[3], lv === 3], ['4 栋房屋', sq.r[4], lv === 4], ['酒店', sq.r[5], lv === 5],
+      ];
+      body += `<table class="rent"><tbody>${rows.map(([a, b, now]) => `<tr${now ? ' class="now"' : ''}><td>${a}</td><td>${money(b)}</td></tr>`).join('')}</tbody></table>`;
+      body += `<div class="facts"><span>每栋房屋<br><b>${money(E.HOUSE[sq.g])}</b></span><span>抵押可得<br><b>${money(E.mortValue(q))}</b></span><span>赎回需付<br><b>${money(E.unmortCost(q))}</b></span><span>收购价（2 倍）<br><b>${money(E.acqPrice(q))}</b></span></div>`;
+    } else if (sq.t === 'rail') {
+      const n = o ? E.RAILS.filter((r) => s.own[r] && s.own[r].o === o.o).length : 0;
+      body += `<table class="rent"><tbody>${[1, 2, 3, 4].map((k) => `<tr${k === n ? ' class="now"' : ''}><td>拥有 ${k} 个交通站</td><td>${money(25 * Math.pow(2, k - 1))}</td></tr>`).join('')}</tbody></table>`;
+      body += `<div class="facts"><span>抵押可得<br><b>${money(E.mortValue(q))}</b></span><span>赎回需付<br><b>${money(E.unmortCost(q))}</b></span></div>`;
+    } else if (sq.t === 'util') {
+      const n = o ? E.UTILS.filter((u) => s.own[u] && s.own[u].o === o.o).length : 0;
+      body += `<table class="rent"><tbody><tr${n === 1 ? ' class="now"' : ''}><td>拥有 1 家</td><td>点数 × 4</td></tr><tr${n === 2 ? ' class="now"' : ''}><td>两家都有</td><td>点数 × 10</td></tr></tbody></table>`;
+      body += `<div class="facts"><span>抵押可得<br><b>${money(E.mortValue(q))}</b></span><span>赎回需付<br><b>${money(E.unmortCost(q))}</b></span></div>`;
+    } else if (sq.t === 'tax') {
+      body += `<p class="deed-desc">停在这里缴纳 ${money(sq.a)}，钱存进旅行基金。</p>`;
+    } else {
+      body += `<p class="deed-desc">${esc(DESC[sq.t] || '')}</p>`;
+    }
+    if (['prop', 'rail', 'util'].includes(sq.t) && s) {
+      if (owner) body += `<div class="owner-line"><span class="chip-tok" style="--pc:${pc(owner)}">${E.TOKENS[owner.tok] || ''}</span><span>属于 <b>${esc(owner.nick)}</b>${o.m ? '，已抵押' : ''}${o.h ? (o.h === 5 ? '，有酒店' : `，${o.h} 栋房屋`) : ''}</span></div>`;
+      else body += '<div class="owner-line muted">无人拥有</div>';
+    }
+    // 自己回合可以操作的按钮
+    const me = s ? meIdx(s) : -1;
+    if (s && s.st === 'play' && o && o.o === me && me >= 0) {
+      const myTurn = s.turn === me && ['roll', 'buy', 'acq', 'end'].includes(s.ph);
+      const ok = myTurn && canSend() && !A.pending && A.vqLen === 0;
+      const btn = (act, label, err) => `<button class="btn small${act === 'build' ? ' primary' : ''}" type="button" data-act="${act}" data-q="${q}"${!ok || err ? ' disabled' : ''}>${label}</button>`;
+      const parts = [];
+      const reasons = [];
+      if (sq.t === 'prop') {
+        const eb = E.canBuild(s, me, q);
+        parts.push(btn('build', `${o.h === 4 ? '升级酒店' : '盖房'} <span class="mo">${MINUS}${money(E.HOUSE[sq.g])}</span>`, eb));
+        if (eb && o.h < 5) reasons.push(eb);
+        if (o.h > 0) { const es = E.canSell(s, me, q); parts.push(btn('sell', `卖一栋 <span class="mo">+${money(E.HOUSE[sq.g] / 2)}</span>`, es)); if (es) reasons.push(es); }
+      }
+      if (o.m) { const eu = E.canUnmort(s, me, q); parts.push(btn('unmort', `赎回 <span class="mo">${MINUS}${money(E.unmortCost(q))}</span>`, eu)); if (eu) reasons.push(eu); }
+      else { const em = E.canMort(s, me, q); parts.push(btn('mort', `抵押 <span class="mo">+${money(E.mortValue(q))}</span>`, em)); if (em && o.h === 0) reasons.push(em); }
+      body += `<div class="deed-acts">${parts.join('')}</div>`;
+      if (!myTurn) body += '<p class="why">轮到你时才能操作。</p>';
+      else if (reasons.length) body += `<p class="why">${esc(reasons[0])}</p>`;
+    }
+    $('#sheet').innerHTML =
+      `<div class="deed-head" style="${headStyle}"><div class="dc">${esc(code)}</div><h3 id="deedTitle">${esc(sq.n)}</h3><div class="dp">${esc(price)}</div></div>` +
+      `<div class="deed-body">${body}<button class="btn sheet-close" type="button" data-act="close-sheet">关闭</button></div>`;
+  }
+
+  // ---------- 说明弹层 ----------
+  function openDlg(kind) {
+    A.dlg = kind;
+    let h = '';
+    if (kind === 'rules') {
+      h = `<h3 id="dlgTitle">玩法</h3><ul>
+        <li>每人起始 ${money(E.START_CASH)}，轮流掷两颗骰子前进，经过起点领 ${money(E.GO_PAY)}。</li>
+        <li>停在没人买的城市、交通站或公用事业，可以按地价买下。停在别人的地产要付租金。</li>
+        <li>集齐同色两座城市，空地租金翻倍，并且可以盖房：每座最多 4 栋房屋，再升级成酒店。同色城市要轮流盖。</li>
+        <li><b>收购：</b>停在别人的城市上，如果同色另一座归你，付完租金后可以按 2 倍地价把它买下。盖了房的城市不能收购。</li>
+        <li>交通站租金按拥有数量 $25 / $50 / $100 / $200；公用事业按骰子点数 × 4，两家都有则 × 10。</li>
+        <li>税款、罚款和保释金都存进「旅行基金」，停在那里的人全部领走。</li>
+        <li>掷出双数可以再掷一次；连续三次双数直接入狱。坐牢时可以交 $50、用免签通行证，或掷出双数出狱。</li>
+        <li>现金不够付钱时，会自动先抵押没盖房的地产，再卖房；还不够就破产，资产归债主。</li>
+        <li>只剩一位玩家，或者到达回合上限时结束，按总资产排名。总资产 = 现金 + 地价（抵押的算一半）+ 房屋造价。</li>
+      </ul>`;
+    } else {
+      const link = inviteLink();
+      h = `<h3 id="dlgTitle">邀请朋友一起玩</h3>
+      <p>把这个链接发给朋友，打开就能进入这个房间，不用注册，也不用登录。</p>
+      <div class="linkbox"><input type="text" id="inviteLink" readonly value="${esc(link)}" aria-label="房间链接"><button class="btn primary" type="button" data-act="copyLink">复制</button>${navigator.share ? '<button class="btn" type="button" data-act="shareLink">分享</button>' : ''}</div>
+      ${A.broker ? '' : `<p class="hint">房间号 <b class="mo">${esc(A.room || '')}</b>，朋友也可以在首页输入房间号加入。</p>`}
+      <h4>需要知道的</h4><ul>
+        <li>创建房间的人是主持人，牌桌在他的页面上运行。主持人离线超过 25 秒，会自动换一位在线玩家接手。</li>
+        <li>有人掉线时，轮到他会先等 40 秒，之后由电脑代打；回来后可以继续自己操作。</li>
+        <li>联机消息经过免费的公共服务器转发，偶尔可能不稳定。拿到链接的人都能进房间，别把链接发到公开的地方。</li>
+      </ul>`;
+    }
+    $('#dlg').innerHTML = h + '<button class="btn sheet-close" type="button" data-act="close-dlg" style="margin-top:18px">知道了</button>';
+    $('#dlgBg').hidden = false;
+    $('#dlg .sheet-close').focus();
+  }
+  function closeDlg() { A.dlg = null; $('#dlgBg').hidden = true; }
+
+  // ---------- 状态更新 ----------
+  function setState(ns) {
+    const prev = A.s;
+    A.s = ns;
+    A.lastStateAt = Date.now();
+    if (A.pending && A.mode === 'online') {
+      const seen = (ns.seen && ns.seen[A.myPid]) || 0;
+      if (seen >= A.pending.n) {
+        if (ns.rej && ns.rej.pid === A.myPid && ns.rej.n === A.pending.n) toast(ns.rej.m, 'bad');
+        A.pending = null;
+      }
+    }
+    if (A.mode === 'online' && ns.seen && A.myPid) A.sentN = Math.max(A.sentN, ns.seen[A.myPid] || 0);
+    if (!ns.st || ns.st !== 'play') A.confirm = null;
+    recomputePresence();
+    queueVisual(prev, ns);
+    renderAll();
+    scheduleBot();
+  }
+
+  // 主持人：把一位玩家的操作应用到牌桌，再发给所有人
+  function sanitizeAct(a) {
+    const out = { t: typeof a.t === 'string' ? a.t.slice(0, 16) : '' };
+    if (Number.isInteger(a.q)) out.q = a.q;
+    if (Number.isInteger(a.i)) out.i = a.i;
+    if (Number.isInteger(a.tok)) out.tok = a.tok;
+    if (Number.isInteger(a.maxR)) out.maxR = a.maxR;
+    if (typeof a.on === 'boolean') out.on = a.on;
+    if (typeof a.nick === 'string') out.nick = a.nick.slice(0, 40);
+    return out;
+  }
+  function hostProcess(pid, act) {
+    const s = A.s;
+    if (!s || !isHostNow()) return;
+    if (!act || !Number.isInteger(act.n) || act.n <= ((s.seen && s.seen[pid]) || 0)) return;
+    const r = E.apply(s, pid, sanitizeAct(act));
+    const ns = r.ok ? r.s : E.clone(s);
+    if (!r.ok) ns.ver = s.ver + 1;
+    ns.seen = Object.assign({}, ns.seen, { [pid]: act.n });
+    if (!r.ok) ns.rej = { pid, n: act.n, m: r.err };
+    commit(ns);
+  }
+  function commit(ns) {
+    setState(ns);
+    if (A.mode === 'online') publishState(ns);
+  }
+  function publishState(ns) {
+    if (!A.client || !isHostNow()) return;
+    A.client.publish(topic('state'), JSON.stringify(ns), { qos: 1, retain: true }, (err) => {
+      if (err) console.warn('发布牌桌失败', err);
+    });
+  }
+  function createTable() {
+    if (A.mode !== 'online' || !A.client) return;
+    const s = E.newTable();
+    s.ver = 1;
+    s.host = A.myPid;
+    s.tid = randId();
+    A.noTable = false;
+    A.synced = true;
+    commit(s);
+  }
+
+  // ---------- 电脑代打 ----------
+  function scheduleBot() {
+    if (A.botTimer) return;
+    const s = A.s;
+    if (!s || s.st !== 'play') return;
+    if (A.mode !== 'local' && !isHostNow()) return;
+    const cur = s.ps[s.turn];
+    if (!needsAuto(cur)) return;
+    const wait = Math.max(750, A.visualBusyUntil - Date.now() + 450);
+    A.botReadyAt = Date.now() + wait;
+    A.botTimer = setTimeout(() => { A.botTimer = null; botTick(); }, wait);
+  }
+  // 后台标签页的定时器会被浏览器放慢，所以主持人收到别人的消息时也会推进电脑回合
+  function maybeBot() {
+    const s = A.s;
+    if (!s || s.st !== 'play') return;
+    if (A.mode !== 'local' && !isHostNow()) return;
+    if (!needsAuto(s.ps[s.turn])) return;
+    if (A.vqLen > 0 || Date.now() < A.botReadyAt) return;
+    clearTimeout(A.botTimer);
+    A.botTimer = null;
+    botTick();
+  }
+  function botTick() {
+    const s = A.s;
+    if (!s || s.st !== 'play') return;
+    if (A.mode !== 'local' && !isHostNow()) return;
+    const cur = s.ps[s.turn];
+    if (!needsAuto(cur)) return;
+    if (Date.now() < A.visualBusyUntil || A.vqLen > 0) { scheduleBot(); return; }
+    const a = E.botAct(s);
+    if (!a) return;
+    let r = E.apply(s, cur.id, a);
+    if (!r.ok) r = E.apply(s, cur.id, { t: s.ph === 'roll' ? 'roll' : s.ph === 'end' ? 'end' : 'pass' });
+    if (r.ok) commit(r.s);
+  }
+
+  // ---------- 在线状态与主持人 ----------
+  const SAFE_ID = /^[A-Za-z0-9_-]{1,40}$/;
+  function topic(k) { return `${TOPIC_ROOT}/${A.room}/${k}`; }
+  function announce() {
+    if (!A.client || !A.connected) return;
+    A.lastAnnounce = Date.now();
+    A.client.publish(topic(`who/${A.myPid}/${A.tab}`), JSON.stringify({ v: 1 }), { qos: 1, retain: true });
+  }
+  function onWho(pid, tab, txt) {
+    if (!SAFE_ID.test(pid) || !SAFE_ID.test(tab)) return;
+    const key = pid + '/' + tab;
+    if (!txt) delete A.tabs[key];
+    else A.tabs[key] = { pid, at: Date.now() };
+    recomputePresence();
+    trackAbsence();
+    checkHost();
+    renderTop(); renderNotice(); renderPax(); renderLobby(); renderCenter();
+  }
+  function recomputePresence() {
+    const now = Date.now(), set = new Set();
+    for (const k in A.tabs) {
+      if (now - A.tabs[k].at < PRESENCE_TTL) set.add(A.tabs[k].pid);
+      else delete A.tabs[k];
+    }
+    if (A.mode === 'online' && A.connected) set.add(A.myPid);
+    A.presentPids = set;
+    A.hostPid = A.s && A.s.host ? A.s.host : null;
+    A.hostOnline = !!(A.hostPid && set.has(A.hostPid));
+  }
+  function trackAbsence() {
+    const s = A.s;
+    if (A.mode !== 'online' || !s) return;
+    const now = Date.now();
+    s.ps.forEach((p) => {
+      if (p.bot || p.out) return;
+      if (A.presentPids.has(p.id)) delete A.absentSince[p.id];
+      else if (!A.absentSince[p.id]) A.absentSince[p.id] = now;
+    });
+  }
+  // 主持人离线太久时，由在线的已入座玩家里编号最小的一位接手
+  function checkHost() {
+    const s = A.s;
+    if (A.mode !== 'online' || !A.connected || !A.synced || !s) return;
+    if (s.host === A.myPid || (s.host && A.presentPids.has(s.host))) { A.hostGoneAt = 0; return; }
+    if (!A.hostGoneAt) { A.hostGoneAt = Date.now(); return; }
+    if (Date.now() - A.hostGoneAt < HOST_GONE_MS) return;
+    const online = [...A.presentPids].sort();
+    const seated = online.filter((pid) => s.ps.some((p) => p.id === pid && !p.bot && !p.out));
+    const pick = (seated.length ? seated : online)[0];
+    if (pick !== A.myPid) return;
+    const ns = E.clone(s);
+    ns.ver = s.ver + 1;
+    ns.host = A.myPid;
+    const me = ns.ps.find((p) => p.id === A.myPid);
+    E.log(ns, (me ? me.nick : '一位旁观者') + ' 接手主持牌桌');
+    A.hostGoneAt = 0;
+    commit(ns);
+    announce();
+  }
+
+  function housekeeping() {
+    const s = A.s;
+    recomputePresence();
+    trackAbsence();
+    checkHost();
+    if (A.mode === 'online' && A.connected && Date.now() - A.lastAnnounce > 20000) announce();
+    if (isHostNow()) maybeBot();
+    // 电脑回合时，前台页面定期提醒主持人，切到后台的主持人页面也能及时推进
+    if (A.mode === 'online' && A.client && A.connected && !isHostNow() && s && s.st === 'play' && document.visibilityState === 'visible') {
+      const cur = s.ps[s.turn];
+      if (cur && (cur.bot || cur.auto || !A.presentPids.has(cur.id)) && Date.now() - A.lastStateAt > 2500 && Date.now() - A.lastTick > 2500) {
+        A.lastTick = Date.now();
+        A.client.publish(topic('act'), JSON.stringify({ pid: A.myPid, tick: 1 }), { qos: 0 });
+      }
+    }
+    if (A.pending && Date.now() - A.pending.at > 15000) {
+      A.pending = null;
+      toast('主持人没有回应，请稍后再试', 'bad');
+      renderAll();
+    }
+    renderTop();
+    renderNotice();
+    scheduleBot();
+  }
+
+  // ---------- 发送操作 ----------
+  function submit(a) {
+    if (A.mode === 'local') { submitLocal(a); return; }
+    if (A.mode !== 'online') return;
+    const s = A.s;
+    if (!s || A.pending) return;
+    const n = Math.max(A.sentN, (s.seen && s.seen[A.myPid]) || 0) + 1;
+    A.sentN = n;
+    const act = Object.assign({}, a, { n, pid: A.myPid });
+    A.pending = { n, at: Date.now() };
+    if (isHostNow()) { hostProcess(A.myPid, act); return; }
+    if (!A.client || !A.connected) { A.pending = null; toast('还没连上服务器，请稍等', 'bad'); return; }
+    A.client.publish(topic('act'), JSON.stringify(act), { qos: 1 }, (err) => {
+      if (err && A.pending && A.pending.n === n) { A.pending = null; toast('操作没有发出去，请再试一次', 'bad'); renderAll(); }
+    });
+    renderAll();
+  }
+  function submitLocal(a) {
+    const s = A.s;
+    if (!s) return;
+    let actor = A.myPid;
+    if (s.st === 'play') {
+      const me = meIdx(s);
+      if (me >= 0) actor = s.ps[me].id;
+    }
+    if (a.t === 'addLocal') { actor = 'local-' + randId(); a = { t: 'join', nick: a.nick, tok: a.tok }; }
+    const r = E.apply(s, actor, a);
+    if (!r.ok) { toast(r.err, 'bad'); return; }
+    commit(r.s);
+  }
+
+  // ---------- 房间连接 ----------
+  function onMessage(t, buf) {
+    const base = `${TOPIC_ROOT}/${A.room}/`;
+    if (!t.startsWith(base)) return;
+    const rest = t.slice(base.length);
+    let txt = '';
+    try { txt = buf && buf.length ? new TextDecoder().decode(buf) : ''; } catch (e) { return; }
+    if (rest === 'state') {
+      if (!txt) return;
+      let d;
+      try { d = JSON.parse(txt); } catch (e) { return; }
+      onState(d);
+      return;
+    }
+    if (rest === 'act') {
+      let a;
+      try { a = JSON.parse(txt); } catch (e) { return; }
+      onAct(a);
+      return;
+    }
+    if (rest.startsWith('who/')) {
+      const parts = rest.split('/');
+      if (parts.length === 3) onWho(parts[1], parts[2], txt);
+    }
+  }
+  function onState(d) {
+    if (!d || typeof d !== 'object' || !Array.isArray(d.ps) || d.v !== 1 || !Number.isInteger(d.ver)) return;
+    A.synced = true;
+    A.noTable = false;
+    clearTimeout(A.syncTimer);
+    const cur = A.s;
+    if (cur && cur.tid === d.tid && d.ver <= cur.ver) {
+      // 两个页面同时以为自己在主持时，编号小的那位优先，另一位让出
+      if (isHostNow() && d.host && d.host !== A.myPid && d.host < A.myPid) setState(d);
+      return;
+    }
+    setState(d);
+  }
+  function onAct(a) {
+    if (!a || typeof a !== 'object' || typeof a.pid !== 'string' || !SAFE_ID.test(a.pid)) return;
+    if (!isHostNow()) return;
+    if (a.tick) { maybeBot(); return; }
+    hostProcess(a.pid, a);
+  }
+  function clearTokens() {
+    for (const el of A.tokEls.values()) el.remove();
+    A.tokEls.clear();
+    A.disp = {};
+  }
+  function resetRoomState() {
+    A.s = null; A.synced = false; A.noTable = false; A.connected = false; A.tabs = {};
+    A.presentPids = new Set(); A.hostOnline = false; A.hostPid = null; A.pending = null; A.sentN = 0;
+    A.hostGoneAt = 0; A.visualReady = false; A.absentSince = {}; A.lastLogK = 0; A.confirm = null;
+    clearTimeout(A.botTimer); A.botTimer = null;
+    closeDeed();
+    clearTokens();
+  }
+  function leaveRoom() {
+    const c = A.client;
+    A.client = null;
+    clearTimeout(A.syncTimer);
+    if (c) {
+      try { if (c.connected) c.publish(topic(`who/${A.myPid}/${A.tab}`), '', { qos: 0, retain: true }); } catch (e) { /* 忽略 */ }
+      try { c.end(false); } catch (e) { /* 忽略 */ }
+    }
+    A.connected = false;
+  }
+  function connectRoom(room, bIdx, creating) {
+    leaveRoom();
+    resetRoomState();
+    A.mode = 'online';
+    A.room = room;
+    A.broker = bIdx;
+    A.creating = !!creating;
+    A.connStart = Date.now();
+    renderAll();
+    if (!window.mqtt) { A.libMissing = true; renderAll(); return; }
+    const client = window.mqtt.connect(BROKERS[bIdx], {
+      clientId: 'gm_' + randId(), clean: true, keepalive: 30, reconnectPeriod: 2500, connectTimeout: 12000,
+      will: { topic: topic(`who/${A.myPid}/${A.tab}`), payload: '', retain: true, qos: 1 },
+    });
+    A.client = client;
+    client.on('connect', () => {
+      if (A.client !== client) return;
+      A.connected = true;
+      A.connLostAt = 0;
+      client.subscribe([topic('state'), topic('act'), topic('who/+/+')], { qos: 1 }, (err) => {
+        if (A.client !== client) return;
+        if (err) { toast('进入房间失败，请刷新再试', 'bad'); return; }
+        announce();
+        if (!A.synced) {
+          clearTimeout(A.syncTimer);
+          A.syncTimer = setTimeout(() => {
+            if (A.client !== client || A.synced) return;
+            A.synced = true;
+            if (!A.s) { A.noTable = true; if (A.creating) createTable(); }
+            renderAll();
+          }, 2500);
+        }
+      });
+      recomputePresence();
+      renderAll();
+    });
+    client.on('message', (t, buf) => { if (A.client === client) onMessage(t, buf); });
+    client.on('close', () => {
+      if (A.client !== client) return;
+      if (A.connected) A.connLostAt = Date.now();
+      A.connected = false;
+      recomputePresence();
+      renderTop(); renderNotice(); renderCenter();
+    });
+    client.on('error', (e) => console.warn('实时连接出错', e && e.message));
+    // 创建房间时，首选服务器连不上就换下一个
+    if (creating && bIdx + 1 < BROKERS.length) {
+      setTimeout(() => {
+        if (A.client === client && !A.connected && !A.s) {
+          const next = bIdx + 1;
+          A.pendingCreate = room;
+          location.hash = roomHash(room, next);
+        }
+      }, 9000);
+    }
+  }
+  function roomHash(room, b) { return 'r=' + room + (b ? '&b=' + b : ''); }
+  function parseHash() {
+    const p = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const room = (p.get('r') || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+    let b = parseInt(p.get('b') || '0', 10);
+    if (!(b >= 0 && b < BROKERS.length)) b = 0;
+    return { room: room.length >= 4 ? room : null, broker: b };
+  }
+  function inviteLink() {
+    return location.origin + location.pathname + '#' + roomHash(A.room, A.broker);
+  }
+  function route() {
+    const { room, broker } = parseHash();
+    if (room) {
+      if (A.mode === 'online' && A.room === room && A.broker === broker) return;
+      const creating = A.pendingCreate === room;
+      A.pendingCreate = null;
+      connectRoom(room, broker, creating);
+    } else if (A.mode !== 'local') {
+      goLanding();
+    }
+  }
+  function newRoomCode() {
+    const abc = 'abcdefghjkmnpqrstuvwxyz23456789';
+    let c = '';
+    const buf = new Uint32Array(7);
+    (window.crypto || window.msCrypto).getRandomValues(buf);
+    buf.forEach((v) => { c += abc[v % abc.length]; });
+    return c;
+  }
+  function createRoom() {
+    if (!window.mqtt) { toast('实时连接组件没有加载成功，请刷新页面', 'bad'); return; }
+    const code = newRoomCode();
+    A.pendingCreate = code;
+    location.hash = roomHash(code, 0);
+  }
+  function goLanding() {
+    leaveRoom();
+    resetRoomState();
+    A.mode = 'landing';
+    A.room = null;
+    renderAll();
+  }
+
+  // ---------- 启动 ----------
+  function startLocal(data) {
+    leaveRoom();
+    resetRoomState();
+    A.mode = 'local';
+    A.room = null;
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    const saved = data && data.local;
+    setState(saved && Array.isArray(saved.ps) && saved.v === 1 ? saved : E.newTable());
+  }
+  function boot() {
+    if (A.booted) return;
+    A.booted = true;
+    A.myPid = localToken();
+    buildBoard();
+    bindUI();
+    const savedNick = store.get('globe-mono.nick');
+    if (savedNick) $('#nick').value = savedNick;
+    A.mode = 'landing';
+    renderAll();
+    window.addEventListener('hashchange', route);
+    route();
+    setInterval(housekeeping, 2000);
+    window.addEventListener('pagehide', () => {
+      if (A.client && A.connected) {
+        try { A.client.publish(topic(`who/${A.myPid}/${A.tab}`), '', { qos: 0, retain: true }); } catch (e) { /* 忽略 */ }
+      }
+    });
+  }
+
+  // ---------- 交互 ----------
+  function bindUI() {
+    document.addEventListener('click', (ev) => {
+      const t = ev.target.closest('[data-act]');
+      if (t && !t.disabled) { handleAct(t.dataset.act, t, ev); return; }
+      const cell = ev.target.closest('.cell');
+      if (cell) openDeed(+cell.dataset.q);
+    });
+    document.addEventListener('submit', (ev) => {
+      if (ev.target.id !== 'joinRoomForm') return;
+      ev.preventDefault();
+      const code = String($('#roomCode').value || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+      if (code.length < 4) { toast('房间号不对，请检查一下', 'bad'); return; }
+      location.hash = roomHash(code, 0);
+    });
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape') { if (!$('#sheetBg').hidden) closeDeed(); if (!$('#dlgBg').hidden) closeDlg(); return; }
+      if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.classList && ev.target.classList.contains('cell')) {
+        ev.preventDefault();
+        openDeed(+ev.target.dataset.q);
+      }
+    });
+    $('#sheetBg').addEventListener('click', (ev) => { if (ev.target.id === 'sheetBg') closeDeed(); });
+    $('#dlgBg').addEventListener('click', (ev) => { if (ev.target.id === 'dlgBg') closeDlg(); });
+    $('#joinForm').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const nick = E.cleanNick($('#nick').value);
+      if (!nick) { toast('请先填写昵称', 'bad'); $('#nick').focus(); return; }
+      store.set('globe-mono.nick', nick);
+      $('#nick').dataset.touched = '';
+      A.tokTouched = false;
+      submit({ t: 'join', nick, tok: selectedTok() });
+    });
+    $('#nick').addEventListener('input', () => { $('#nick').dataset.touched = '1'; });
+    $('#tkrow').addEventListener('change', () => { A.tokTouched = true; });
+    const grid = $('#grid');
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => {
+        grid.classList.add('noanim');
+        if (A.vqLen === 0) layoutTokens(A.s);
+        requestAnimationFrame(() => grid.classList.remove('noanim'));
+      }).observe(grid);
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && A.mode === 'online') { announce(); housekeeping(); }
+    });
+  }
+  function selectedTok() {
+    const el = document.querySelector('#tkrow input:checked');
+    return el ? +el.value : 0;
+  }
+  function copyLink() {
+    const link = inviteLink();
+    const inp = $('#inviteLink');
+    const fallback = () => { if (inp) { inp.focus(); inp.select(); } toast('请手动复制上面的链接'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(() => toast('链接已复制，发给朋友吧'), fallback);
+    } else fallback();
+  }
+  function shareLink() {
+    if (!navigator.share) { copyLink(); return; }
+    navigator.share({ title: '环球大富翁', text: '来和我玩环球大富翁，打开链接就能入座：', url: inviteLink() }).catch(() => {});
+  }
+  function handleAct(act, el) {
+    switch (act) {
+      case 'rules': case 'invite': openDlg(act); return;
+      case 'close-dlg': closeDlg(); return;
+      case 'close-sheet': closeDeed(); return;
+      case 'deed': openDeed(+el.dataset.q); return;
+      case 'createRoom': createRoom(); return;
+      case 'createHere': A.creating = true; createTable(); return;
+      case 'playLocal': startLocal({}); return;
+      case 'leaveRoom':
+        if (A.mode === 'local') { goLanding(); return; }
+        history.replaceState(null, '', location.pathname + location.search);
+        goLanding();
+        return;
+      case 'copyLink': copyLink(); return;
+      case 'shareLink': shareLink(); return;
+      case 'retry': if (A.room) connectRoom(A.room, A.broker, A.creating); return;
+      case 'cfg': submit({ t: 'cfg', maxR: +el.dataset.v }); return;
+      case 'kick': submit({ t: 'kick', i: +el.dataset.i }); return;
+      case 'addLocal': {
+        const nick = E.cleanNick($('#nick').value);
+        if (!nick) { toast('请先填写这位玩家的昵称', 'bad'); return; }
+        submitLocal({ t: 'addLocal', nick, tok: selectedTok() });
+        $('#nick').value = '';
+        return;
+      }
+      case 'auto': submit({ t: 'auto', on: !!el.checked }); return;
+      case 'resign': case 'endGame': A.confirm = act; renderMine(); return;
+      case 'cancel': A.confirm = null; renderMine(); return;
+      case 'resign-yes': A.confirm = null; submit({ t: 'resign' }); return;
+      case 'endGame-yes': A.confirm = null; submit({ t: 'endGame' }); return;
+      case 'build': case 'sell': case 'mort': case 'unmort': submit({ t: act, q: +el.dataset.q }); return;
+      default: submit({ t: act });
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
