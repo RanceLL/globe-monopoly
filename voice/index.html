@@ -919,7 +919,7 @@ const RICH = (() => {
     if (to === 'pot') s.pot += amt;
     else if (typeof to === 'number' && s.ps[to] && !s.ps[to].out) s.ps[to].cash += amt;
   }
-  // 現金不夠時：先從存款緊急提領（手續費 10%），再賣股票，再賣建築，最後賣地
+  // 現金不夠時：先從存款緊急提領（手續費 10%），再賣股票（只賣剛好夠付的股數），再賣建築，最後賣地
   function raise(s, i, need) {
     const P = s.ps[i];
     const parts = [];
@@ -931,14 +931,22 @@ const RICH = (() => {
       parts.push(`緊急提領存款 $${take.toLocaleString('en-US')}（手續費 $${fee.toLocaleString('en-US')}）`);
     }
     if (P.cash < need) {
-      let got = 0;
-      P.stk.forEach((n, k) => {
-        if (P.cash + got >= need || !n) return;
-        got += Math.round(n * s.stk[k].p);
-        P.stk[k] = 0;
-        setCost(P, k, 0);
-      });
-      if (got) { P.cash += got; parts.push(`賣掉股票 $${got.toLocaleString('en-US')}`); }
+      // 從市值最大的持股開始賣，每檔只賣補足差額需要的股數，不會整批賣光
+      const sold = [];
+      const order = P.stk.map((n, k) => k).filter((k) => P.stk[k] > 0)
+        .sort((x, y) => P.stk[y] * s.stk[y].p - P.stk[x] * s.stk[x].p);
+      for (const k of order) {
+        if (P.cash >= need) break;
+        const price = s.stk[k].p, held = P.stk[k];
+        const n = Math.min(held, Math.ceil((need - P.cash) / price));
+        const got = Math.round(n * price);
+        const basis = Math.round(costOf(P, k) * n / held);
+        setCost(P, k, held > n ? costOf(P, k) - basis : 0);
+        P.stk[k] -= n;
+        P.cash += got;
+        sold.push(`${STOCKS[k].n} ${n} 股 $${got.toLocaleString('en-US')}`);
+      }
+      if (sold.length) parts.push(`賣掉股票（${sold.join('、')}）`);
     }
     let levels = 0, lands = 0, guard = 200;
     while (P.cash < need && guard-- > 0) {
@@ -2085,12 +2093,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
 
   // ---------- 小工具 ----------
   function setHTML(el, html) { if (el && el._h !== html) { el.innerHTML = html; el._h = html; } }
-  function toast(msg, kind) {
+  function toast(msg, kind, ms) {
     const el = document.createElement('div');
     el.className = 'toast' + (kind === 'bad' ? ' bad' : '');
     el.textContent = msg;
     $('#toasts').appendChild(el);
-    setTimeout(() => el.remove(), 3600);
+    setTimeout(() => el.remove(), ms || 3600);
   }
   function localToken() {
     let t = store.get('globe-mono.pid');
@@ -2455,6 +2463,19 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       setTimeout(() => f.remove(), 1800);
     });
   }
+  // 自己（本機模式是每位真人玩家）現金不夠、被自動提領存款或賣股票時跳出提醒，免得以為股票不見了
+  function forcedNotice(prev, ns) {
+    const lastK = prev.log && prev.log.length ? prev.log[prev.log.length - 1].k : 0;
+    const me = meIdx(ns);
+    for (const e of ns.log) {
+      if (e.k <= lastK || !Array.isArray(e.s) || !e.s[0] || e.s[0].p == null) continue;
+      const i = e.s[0].p, msg = e.s[1];
+      if (typeof msg !== 'string' || msg.indexOf('現金不夠') < 0) continue;
+      const P = ns.ps[i];
+      if (!P || P.bot || (A.mode !== 'local' && i !== me)) continue;
+      toast(`${A.mode === 'local' ? P.nick : '你'}的${msg.trim()}`, 'bad', 8000);
+    }
+  }
   function queueVisual(prev, ns) {
     const fresh = !A.visualReady || !prev || prev.gid !== ns.gid;
     if (fresh) {
@@ -2475,7 +2496,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
     if (ns.mv) A.qMvK = Math.max(A.qMvK, ns.mv.k);
     if (ns.card) A.qCardK = Math.max(A.qCardK, ns.card.k);
     if (!job.roll && !job.mv && !job.card) {
-      if (A.vqLen === 0) { showDeltas(prev, ns); layoutTokens(ns); }
+      if (A.vqLen === 0) { showDeltas(prev, ns); layoutTokens(ns); forcedNotice(prev, ns); }
+      else A.vq = A.vq.then(() => forcedNotice(prev, ns)).catch((e) => console.warn(e));
       return;
     }
     A.visualBusyUntil = Math.max(A.visualBusyUntil, Date.now()) + jobCost(job);
@@ -2496,6 +2518,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
     s.ps.forEach((p) => { A.disp[p.id] = p.pos; });
     layoutTokens(A.s || s);
     if (!fast) showDeltas(job.prev, s);
+    forcedNotice(job.prev, s);
   }
   const busy = () => A.vqLen > 0;
 
@@ -2969,6 +2992,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       if (q > 0) {
         const cost = Math.round(price * q), fee = E.stockFee(P, cost);
         t.push(`買進 ${q} 股：${money(cost)}${fee ? `，加手續費 ${money(fee)}，共 ${money(cost + fee)}` : ''}。`);
+        const left = P.cash - cost - fee;
+        if (left >= 0 && left < 2000) t.push(`買完現金只剩 ${money(left)}。之後付不出錢時，會先動用存款，再自動賣掉一部分股票。`);
         if (held && q <= held) {
           const got = Math.round(price * q), sfee = E.stockFee(P, got);
           const gain = got - sfee - Math.round(E.costOf(P, k) * q / held);
@@ -3007,7 +3032,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       <h4>神明、股市、銀行</h4><ul>
         <li>停在土地公廟會擲筊：聖筊請來財神、福神或土地公，笑筊點數 +30，陰筊可能招來衰神或窮神。衰神、窮神會在你超車時跳到對方身上。</li>
         <li>股市每天開盤漲跌，自己回合隨時可以買賣。新聞和紅卡、黑卡會讓股價大漲大跌。股市區會顯示你每檔股票的買入均價，點進去可以看帳面損益。</li>
-        <li>存款每天有 1% 利息，而且不怕均富卡、查稅卡。自己的回合隨時可以存款、提款：經過或停在銀行的那一回合提款免手續費，其他時候提款收 ${Math.round(E.WD_FEE * 100)}% 手續費。現金不夠付錢時會從存款緊急提領，扣 10% 手續費。</li>
+        <li>存款每天有 1% 利息，而且不怕均富卡、查稅卡。自己的回合隨時可以存款、提款：經過或停在銀行的那一回合提款免手續費，其他時候提款收 ${Math.round(E.WD_FEE * 100)}% 手續費。現金不夠付錢時（包括別人回合要付的小費、禮金），會先從存款緊急提領，扣 10% 手續費；還不夠就自動賣掉剛好夠付的股票，再不夠才拆賣建築和土地。</li>
       </ul>
       <h4>語音</h4><ul>
         <li>點上方的「加入語音」，允許瀏覽器使用麥克風，就能和同一個房間裡也加入語音的人說話。左下角的圓形按鈕可以靜音。</li>
