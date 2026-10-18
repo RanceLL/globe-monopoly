@@ -210,10 +210,20 @@ button, input { font: inherit; color: inherit; }
 .tokens { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
 .tok {
   position: absolute; left: 0; top: 0; width: var(--ts, 22px); height: var(--ts, 22px); margin: calc(var(--ts, 22px) / -2) 0 0 calc(var(--ts, 22px) / -2);
-  border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px #fff, 0 3px 6px rgba(0, 0, 0, .45);
+  border-radius: 50%; box-shadow: 0 0 0 2px #fff, 0 3px 6px rgba(0, 0, 0, .45);
   transition: transform .2s cubic-bezier(.3, .7, .4, 1);
 }
-.tok svg { width: 100%; height: 100%; display: block; }
+.tok > svg { width: 100%; height: 100%; display: block; border-radius: 50%; clip-path: circle(50% at 50% 50%); }
+/* 棋子右上角的神明徽章，點了看效果 */
+.tok .gb {
+  position: absolute; top: -28%; right: -30%; width: 58%; height: 58%; padding: 0; border: 0; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer; pointer-events: auto; box-shadow: 0 0 0 1.5px #fff, 0 2px 4px rgba(0, 0, 0, .45);
+}
+.tok .gb::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; }
+.tok .gb.good { background: #FFE08A; }
+.tok .gb.bad { background: #3A3F63; }
+.tok .gb svg { width: 88%; height: 88%; display: block; }
+.tok .gb:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .tok.cur { box-shadow: 0 0 0 2px #fff, 0 0 0 4.5px var(--gold), 0 4px 10px rgba(0, 0, 0, .5); z-index: 2; }
 .tok.moving { transition-duration: .12s; z-index: 3; }
 .tok.hop > svg { animation: hop .22s ease-out; }
@@ -268,6 +278,10 @@ button, input { font: inherit; color: inherit; }
 .chip.good { background: rgba(255, 201, 60, .2); }
 .chip.bad { background: rgba(230, 57, 70, .25); }
 .chip.plain { padding-left: 9px; }
+button.chip { border: 0; font-family: inherit; line-height: inherit; cursor: pointer; }
+button.chip:hover { filter: brightness(1.2); }
+button.chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.chip .q { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-left: 1px; border-radius: 50%; background: rgba(255, 255, 255, .24); font-size: 10px; font-weight: 700; line-height: 1; }
 .skill { margin: 10px 0 0; font-size: 12.5px; color: var(--on-2); }
 .skill b { color: var(--on); font-weight: 500; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -389,6 +403,24 @@ button, input { font: inherit; color: inherit; }
 .sheet .sub { color: var(--on-2); font-size: 13px; margin: 0 0 12px; }
 .sheet .foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .sheet .foot .btn { flex: 1 1 auto; }
+/* 神明說明 */
+.godhero { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px 14px; border-radius: 14px; margin-top: 4px; }
+.godhero.good { background: rgba(255, 201, 60, .16); }
+.godhero.bad { background: rgba(230, 57, 70, .2); }
+.godhero .gi, .glist .gi { border-radius: 50%; display: grid; place-items: center; background: #FFE08A; flex: none; }
+.godhero.bad .gi, .glist .gi.bad { background: #3A3F63; }
+.godhero .gi { width: 64px; height: 64px; }
+.godhero .gi svg { width: 46px; height: 46px; }
+.sheet .godhero .sub { margin: 0; }
+.sheet .gx { margin: 4px 0 0; font-size: 16px; font-weight: 700; line-height: 1.5; }
+.sheet .gnotes { margin-top: 12px; font-size: 13px; color: var(--on-2); }
+.sheet .glist { list-style: none; padding: 0; gap: 6px; }
+.glist li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 10px; border-radius: 12px; background: rgba(10, 14, 50, .45); }
+.glist li.on { box-shadow: inset 0 0 0 2px var(--gold); }
+.glist .gi { width: 36px; height: 36px; }
+.glist .gi svg { width: 27px; height: 27px; }
+.glist b { font-size: 14px; margin-right: 6px; }
+.sheet .glist p { margin: 2px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--on-2); }
 .x-close { position: absolute; top: 12px; right: 12px; }
 .opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 8px; }
 .opts.nums { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -1911,86 +1943,110 @@ const ART = (() => {
   const lnT = `stroke="${INK}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"`;
 
   // ---------- 角色頭像（64×64，外層用 CSS 裁成圓形） ----------
-  function face(skin, opt) {
-    opt = opt || {};
-    const eyes = opt.happy
-      ? `<path d="M24.5 30.5q2.5-2.6 5 0M34.5 30.5q2.5-2.6 5 0" fill="none" ${lnT}/>`
-      : `<circle cx="27" cy="30" r="1.9" fill="${INK}"/><circle cx="37" cy="30" r="1.9" fill="${INK}"/>`;
-    const mouth = opt.grin
-      ? `<path d="M26.5 35.5q5.5 6 11 0z" fill="#fff" ${lnT}/>`
-      : `<path d="M28 36q4 3.4 8 0" fill="none" ${lnT}/>`;
-    return `<circle cx="19.5" cy="31" r="3.2" fill="${skin}" ${ln}/><circle cx="44.5" cy="31" r="3.2" fill="${skin}" ${ln}/>` +
-      `<ellipse cx="32" cy="29.5" rx="12.8" ry="13.6" fill="${skin}" ${ln}/>` +
-      `<circle cx="24.6" cy="35" r="2.3" fill="#F08A8A" opacity=".5"/><circle cx="39.4" cy="35" r="2.3" fill="#F08A8A" opacity=".5"/>` +
-      eyes + mouth;
-  }
-  const neck = (skin) => `<path d="M27.5 40h9v9h-9z" fill="${skin}" ${ln}/>`;
-  const body = (cloth) => `<path d="M7 66c2-13 12-18.5 25-18.5S55 53 57 66z" fill="${cloth}" ${ln}/>`;
-  const wrap = (bg, inner) => `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="64" height="64" fill="${bg}"/>` +
-    `<circle cx="50" cy="12" r="16" fill="#fff" opacity=".12"/>${inner}</svg>`;
+  // 頭部放大到佔滿畫面，每個角色有一個遠看也認得出的輪廓（帽子、髮型、道具）和一個背景花紋
+  const head = (skin) => `<circle cx="14.8" cy="37.4" r="3.8" fill="${skin}" ${ln}/><circle cx="49.2" cy="37.4" r="3.8" fill="${skin}" ${ln}/>` +
+    `<ellipse cx="32" cy="35.6" rx="16" ry="16.6" fill="${skin}" ${ln}/>`;
+  const cheeks = '<circle cx="22.4" cy="42" r="2.7" fill="#F08A8A" opacity=".55"/><circle cx="41.6" cy="42" r="2.7" fill="#F08A8A" opacity=".55"/>';
+  const eyes = `<circle cx="25.6" cy="35.8" r="2.3" fill="${INK}"/><circle cx="38.4" cy="35.8" r="2.3" fill="${INK}"/>`;
+  const happyEyes = `<path d="M22.4 36.6q3.2-3.4 6.4 0M35.2 36.6q3.2-3.4 6.4 0" fill="none" stroke="${INK}" stroke-width="2.1" stroke-linecap="round"/>`;
+  const smile = `<path d="M27.2 43.6q4.8 4 9.6 0" fill="none" ${lnT}/>`;
+  const grin = `<path d="M25.8 42.4q6.2 7.8 12.4 0z" fill="#fff" ${lnT}/>`;
+  const shoulders = (cloth) => `<path d="M5 66c1.6-9.6 11.4-14.8 27-14.8S57.4 56.4 59 66z" fill="${cloth}" ${ln}/>`;
+  const wrap = (bg, motif, inner) => `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="64" height="64" fill="${bg}"/>` +
+    `<g opacity=".2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">${motif}</g>${inner}</svg>`;
 
   const AV = {
-    // 房仲：油頭、西裝、紅領帶、大笑
-    agent: (c) => wrap(c, neck(SK.a) + body('#263866') +
-      `<path d="M26 47.6 32 57l6-9.4z" fill="#fff" ${lnT}/><path d="M30.4 49h3.2l1.1 7.4-2.7 3.2-2.7-3.2z" fill="#D7263D" ${lnT}/>` +
-      face(SK.a, { grin: true }) +
-      `<path d="M18.8 28.6c-1.3-11 6.8-16.4 14.6-15.8 8 .6 13.4 6 12 15.4-3.6-5.6-9.6-8.2-16.4-7.2-4.6.7-8 3.4-10.2 7.6z" fill="${INK}"/>` +
-      `<path d="M30 15.8c4-1.8 9-.9 11.6 1.6" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".6"/>`),
-    // 運將：司機帽、八字鬍、淺藍襯衫
-    taxi: (c) => wrap(c, neck(SK.c) + body('#8EC5F0') +
-      `<path d="M25 47.6l7 6 7-6" fill="none" ${lnT}/>` +
-      face(SK.c) +
-      `<path d="M26.4 35c2.4-2.6 4.4-2.2 5.6-.6 1.2-1.6 3.2-2 5.6.6-2.4.8-4 .9-5.6.3-1.6.6-3.2.5-5.6-.3z" fill="${INK}"/>` +
-      `<path d="M18.6 24.6c0-9.6 6-13.4 13.4-13.4s13.4 3.8 13.4 13.4z" fill="#3D4470" ${ln}/>` +
-      `<path d="M17 24.4h30.4c3 0 4.8 1.4 5.2 3.2H17.4c-1.4 0-1.8-3.2-.4-3.2z" fill="#262B4D" ${ln}/>` +
-      `<rect x="28.6" y="15.4" width="6.8" height="5" rx="1" fill="#F0A500" ${lnT}/>`),
-    // 手搖飲店長：馬尾、遮陽帽、圍裙、手上一杯珍奶
-    boba: (c) => wrap(c, neck(SK.a) + body('#FFFFFF') +
-      `<path d="M22 50.5 24 66M42 50.5 40 66" stroke="#E07A5F" stroke-width="4"/>` +
-      `<path d="M44.5 25c6 1 8 7 5.6 12.4-1.4-3.6-3.2-5.8-6-6.8z" fill="#5B3A29" ${ln}/>` +
-      face(SK.a, { happy: true }) +
-      `<path d="M19.4 26.4c.6-8.6 6-12.6 12.6-12.6 6.8 0 12.4 4.4 12.6 12.6-4-3.8-8.4-5.4-12.6-5.4s-8.8 1.6-12.6 5.4z" fill="#5B3A29"/>` +
-      `<path d="M17.6 22.6c4.6-3.4 9.4-4.8 14.4-4.8s9.8 1.4 14.4 4.8l3.2 1.2c-1 1.6-3 2.2-5 1.6-3.6-1.8-8-2.6-12.6-2.6s-9 .8-12.6 2.6c-2 .6-4-.1-5-1.6z" fill="#FFF3D6" ${ln}/>` +
-      `<path d="M45 45.6h11l-1.6 15.4h-7.8z" fill="#F3DDBA" ${ln}/><path d="M53.4 39.4l-2.4 16" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>` +
-      `<circle cx="48.6" cy="57.6" r="1.3" fill="${INK}"/><circle cx="51.6" cy="58.2" r="1.3" fill="${INK}"/><circle cx="50.4" cy="55.4" r="1.3" fill="${INK}"/>`),
-    // 工程師：亂髮、圓框眼鏡、帽T、耳機掛脖子
-    eng: (c) => wrap(c, neck(SK.a) + body('#5A6380') +
-      `<path d="M21.6 49.4c3 4.6 6.6 6.4 10.4 6.4s7.4-1.8 10.4-6.4" fill="none" stroke="#7E88A8" stroke-width="3.4"/>` +
-      `<path d="M23 44.6c0 6.4 4 9.6 9 9.6s9-3.2 9-9.6" fill="none" stroke="${INK}" stroke-width="2.6"/>` +
-      `<rect x="19.6" y="43" width="5.4" height="7" rx="2.2" fill="#E54B4B" ${lnT}/><rect x="39" y="43" width="5.4" height="7" rx="2.2" fill="#E54B4B" ${lnT}/>` +
-      face(SK.a) +
-      `<path d="M18.8 27.4c-2-6.4 1.4-12.2 6.6-13.8-.4 1.6 0 2.6 1 3.2 1.4-3.2 4.6-4.6 8-3.6-.8 1-1 2-.4 3 2.8-2 6.6-1.4 8.8.8-1.4.4-2.2 1.2-2.4 2.4 3.2 1.4 4.4 5 3.4 8.4-2-3.6-4.6-5.4-7.8-5.8-3.4 2.4-8.6 3.4-13.6 2.4-1.6 1-2.8 2-3.6 3z" fill="#1E1A30"/>` +
-      `<circle cx="27" cy="30" r="4.6" fill="#fff" fill-opacity=".25" ${lnT}/><circle cx="37" cy="30" r="4.6" fill="#fff" fill-opacity=".25" ${lnT}/><path d="M31.6 30h.8" ${lnT}/>`),
-    // 廟公：平頭白髮、瞇眼笑、唐裝、佛珠
-    temple: (c) => wrap(c, neck(SK.b) + body('#EAD9A8') +
-      `<path d="M32 47.6V66" stroke="${INK}" stroke-width="1.6"/><path d="M29.4 53h5.2M29.4 58.4h5.2" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>` +
-      face(SK.b, { happy: true }) +
-      `<path d="M19.6 24.4c1.6-7.4 6.4-10.6 12.4-10.6s10.8 3.2 12.4 10.6c-3.6-2.2-7.8-3.2-12.4-3.2s-8.8 1-12.4 3.2z" fill="#D9D9E3" ${lnT}/>` +
-      `<path d="M23.4 39.4c1.4 1.4 2.8 2 4.4 2.2M40.6 39.4c-1.4 1.4-2.8 2-4.4 2.2" fill="none" stroke="${INK}" stroke-width="1.2" stroke-linecap="round" opacity=".5"/>` +
-      [20, 23.6, 27.6, 32, 36.4, 40.4, 44].map((x, k) => `<circle cx="${x}" cy="${48.4 + [3.6, 5.8, 7.4, 8, 7.4, 5.8, 3.6][k]}" r="1.9" fill="#8B4A2B" ${lnT}/>`).join('')),
-    // 外送員：安全帽、背後的外送箱
-    rider: (c) => wrap(c, `<rect x="38" y="30" width="22" height="20" rx="2.4" fill="#FF8C42" ${ln}/><path d="M38 37h22" ${ln}/>` +
-      neck(SK.b) + body('#3F3D6B') +
-      `<path d="M24 50l-2 16M40 50l2 16" stroke="#FFD166" stroke-width="2.4"/>` +
-      face(SK.b, { grin: true }) +
-      `<path d="M17.6 29.4c-1.4-11 5.4-17.6 14.4-17.6s15.8 6.6 14.4 17.6c-.6 1.4-1.6 1.8-2.6 1.4-1.4-8-5.8-11.4-11.8-11.4s-10.4 3.4-11.8 11.4c-1 .4-2-.1-2.6-1.4z" fill="#F7F7FF" ${ln}/>` +
-      `<path d="M21.4 15.6c3.4-2.6 6.8-3.6 10.6-3.6s7.2 1 10.6 3.6" fill="none" stroke="#7B4FD6" stroke-width="3"/>` +
-      `<path d="M20.8 22.6c3.4-1.8 7-2.6 11.2-2.6s7.8.8 11.2 2.6" fill="none" stroke="#5DC8F5" stroke-width="2.6" opacity=".9"/>`),
-    // 菜市場阿姨：燙捲髮、金耳環、花襯衫、茄芷袋
-    auntie: (c) => wrap(c, neck(SK.b) + body('#F7A1C4') +
-      [[18, 56], [27, 60], [38, 57], [47, 61], [52, 54]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#fff"/><circle cx="${x}" cy="${y}" r="1" fill="#F0A500"/>`).join('') +
-      `<path d="M3 50h15l2 14H1z" fill="#fff" ${ln}/><path d="M2.4 54.2h16.2" stroke="#D7263D" stroke-width="2.4"/><path d="M1.8 58.6h17.4" stroke="#2F6FED" stroke-width="2.4"/><path d="M6 50c0-5 7-5 7 0" fill="none" ${lnT}/>` +
-      face(SK.b, { grin: true }) +
-      [[20, 22], [24, 17], [29.5, 14.4], [35, 14.4], [40, 17], [44, 22], [18.6, 27.6], [45.4, 27.6]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.6" fill="#5A2343" ${lnT}/>`).join('') +
-      `<circle cx="19.4" cy="36.6" r="1.6" fill="#F0A500" ${lnT}/><circle cx="44.6" cy="36.6" r="1.6" fill="#F0A500" ${lnT}/>`),
-    // 補習班名師：整齊旁分、耳掛麥克風、背心
-    teacher: (c) => wrap(c, neck(SK.a) + body('#FFFFFF') +
-      `<path d="M14.6 54.4c3-4 9-6.6 13-6.8L32 60l4.4-12.4c4 .2 10 2.8 13 6.8L53 66H11z" fill="#2E4A3A" ${ln}/>` +
-      `<path d="M28.6 47.6 32 51l3.4-3.4" fill="none" ${lnT}/>` +
-      face(SK.a) +
-      `<path d="M19 27.6c-.6-9.2 5.4-14.2 13.4-14.2 7.6 0 12.8 4.6 12.6 13.6-2.4-3-5.4-5-9-5.8-1.6 1.4-4.6 2.4-8 2.4-3.4 0-6.4.8-9 4z" fill="#3A2E4E"/>` +
-      `<path d="M44.6 33c1.6 4.6-1.8 7.2-6.4 6.8" fill="none" stroke="${INK}" stroke-width="1.6" stroke-linecap="round"/><circle cx="37.6" cy="39.8" r="1.8" fill="${INK}"/>` +
-      `<rect x="25" y="27.4" width="5" height="1.4" rx=".7" fill="${INK}" opacity=".8"/><rect x="34" y="27.4" width="5" height="1.4" rx=".7" fill="${INK}" opacity=".8"/>`),
+    // 房仲：高聳的油頭、自信大笑、閃亮的牙、西裝紅領帶
+    agent: (c) => wrap(c, '<path d="M-4 22 22-4M-4 40 40-4M24 68 68 24M42 68 68 42"/>',
+      shoulders('#22305C') +
+      `<path d="M25.4 51.8 32 62.4l6.6-10.6z" fill="#fff" ${lnT}/><path d="M30.1 53.2h3.8l1.3 7.6-3.2 3.8-3.2-3.8z" fill="#D7263D" ${lnT}/>` +
+      head('#F7CFA6') + cheeks +
+      `<path d="M21.6 31q3.8-2.8 7.6-.8M34.8 30.2q3.8-2 7.6.8" fill="none" stroke="${INK}" stroke-width="2.3" stroke-linecap="round"/>` + eyes + grin +
+      `<path d="M26.6 44.2h10.8" stroke="${INK}" stroke-width="1" opacity=".35"/>` +
+      `<path d="M15.4 34.8C12.6 24.6 16.4 15.4 24 11.4c6-3.2 13.6-3.2 19.2.2 5 3 7.4 8.4 6.2 14.2.6 3 .2 6.2-1.2 9.2-2-5.6-6.2-9-12-10-5-.8-10 .4-14 3.2-2.8 2-5 4.4-6.8 6.6z" fill="${INK}"/>` +
+      `<path d="M17.4 21.4C17.8 12.6 25 6 34.4 5.8c6.6-.2 11.8 2.8 14 7.6-5.6-2.6-12-2.8-18-.6-4.8 1.8-9.2 4.8-13 8.6z" fill="${INK}" ${lnT}/>` +
+      `<path d="M22.6 13.6c5-4 12.6-5.6 19.6-3.4M20.4 20.4c4.4-3.6 10.4-5.4 16.4-5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>` +
+      `<path d="M43.6 15.4c2.4 1.8 4 4.4 4.6 7.4M40.4 17.8c2 1.6 3.4 3.8 4 6.4" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".35"/>` +
+      `<path d="M46.4 41.4l1.1 2.7 2.7 1.1-2.7 1.1-1.1 2.7-1.1-2.7-2.7-1.1 2.7-1.1z" fill="#FFF6C2" ${lnT}/>`),
+    // 運將：司機帽配計程車黑白格、雷朋墨鏡、八字鬍
+    taxi: (c) => wrap(c, '<path d="M0 58h64M0 6h64"/>',
+      shoulders('#8EC5F0') + `<path d="M24.6 52.2l7.4 6.6 7.4-6.6" fill="none" ${lnT}/>` +
+      head('#D69A6A') + cheeks +
+      `<path d="M23.6 44c2.9-3.4 5.6-3 8.4-.8 2.8-2.2 5.5-2.6 8.4.8-3 1.4-5.6 1.5-8.4.5-2.8 1-5.4.9-8.4-.5z" fill="${INK}"/>` +
+      `<path d="M19 33.2h11c.7 0 1.2.6 1.1 1.3l-.7 3.8c-.5 2.6-2.7 4.4-5.3 4.4h-.4c-2.8 0-5.1-2-5.5-4.8l-.4-3.4c-.1-.7.4-1.3 1.2-1.3z" fill="#1E1A30" ${lnT}/>` +
+      `<path d="M45 33.2H34c-.7 0-1.2.6-1.1 1.3l.7 3.8c.5 2.6 2.7 4.4 5.3 4.4h.4c2.8 0 5.1-2 5.5-4.8l.4-3.4c.1-.7-.4-1.3-1.2-1.3z" fill="#1E1A30" ${lnT}/>` +
+      `<path d="M31 34q1-1.2 2 0" fill="none" ${lnT}/><path d="M21.4 35.4l3.2-1.2M35.4 35.4l3.2-1.2" stroke="#8FDcff" stroke-width="1.5" stroke-linecap="round"/>` +
+      `<path d="M15 30.4c-.8-10.4 6.8-16.6 17-16.6s17.8 6.2 17 16.6z" fill="#2C3363" ${ln}/>` +
+      [16.2, 21.6, 27, 32.4, 37.8, 43.2].map((x, k) => `<rect x="${x}" y="${k % 2 ? 24 : 26.6}" width="5.4" height="2.6" fill="#fff"/>`).join('') +
+      `<path d="M15.6 24h32.8M15.4 29.2h33.2" stroke="${INK}" stroke-width="1.2"/>` +
+      `<path d="M12.8 30h38.6c2.4 0 3.6 1.4 3.6 2.8H12.2c-1 0-1.2-2.8.6-2.8z" fill="#1C2148" ${ln}/>` +
+      `<rect x="28.2" y="16.8" width="7.6" height="5.2" rx="1" fill="#FFC93C" ${lnT}/>`),
+    // 手搖飲店長：遮陽帽、高馬尾、手上一大杯珍奶
+    boba: (c) => wrap(c, '<circle cx="9" cy="12" r="3"/><circle cx="18" cy="6" r="2"/><circle cx="56" cy="8" r="2.4"/><circle cx="6" cy="26" r="1.6"/>',
+      shoulders('#FFFFFF') + `<path d="M22.4 53.4 23.6 66M41.6 53.4 40.4 66" stroke="#E07A5F" stroke-width="4.4"/>` +
+      `<path d="M43.4 20.6c8.4-3 15.4 2.2 15.2 11.4-.2 5.4-3 9.4-6.6 11.6.4-5.6-1.6-10.8-7.6-13.8z" fill="#5B3A29" ${ln}/><circle cx="46.2" cy="23.6" r="2.4" fill="#E63946" ${lnT}/>` +
+      head('#F7CFA6') + cheeks + happyEyes + grin +
+      `<path d="M16.6 33.4c-.4-9 6.4-14.8 15.4-14.8s15.8 5.8 15.4 14.8c-4-4.6-9.2-6.8-15.4-6.8s-11.4 2.2-15.4 6.8z" fill="#5B3A29"/>` +
+      `<path d="M14.6 27.6c5.2-3.8 11.2-5.6 17.4-5.6s12.2 1.8 17.4 5.6l3.8 1.6c-1.2 2-3.8 2.6-6.2 1.8-4.2-2.2-9.4-3.2-15-3.2s-10.8 1-15 3.2c-2.4.8-5 .2-6.2-1.8z" fill="#FFF3D6" ${ln}/>` +
+      `<path d="M18.4 25.4c4.2-2.2 8.8-3.2 13.6-3.2s9.4 1 13.6 3.2" fill="none" stroke="#E63946" stroke-width="2"/>` +
+      `<path d="M38.8 39.6h19.4l-2.6 23.4H41.4z" fill="#E7C397" ${ln}/><path d="M38.2 39.6h20.6" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>` +
+      `<path d="M52.4 40.2l4.2-15" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M52.4 40.2l4.2-15" stroke="#E63946" stroke-width="2.8" stroke-linecap="round"/>` +
+      [[44, 58.4], [47.6, 59.8], [51.4, 58.6], [49.6, 55.6], [45.6, 55], [53.4, 55.4]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.9" fill="${INK}"/>`).join('')),
+    // 工程師：亂翹的頭髮、粗框圓眼鏡、頭上一副紅色大耳機、帽T
+    eng: (c) => wrap(c, '<path d="M8 10 3 15l5 5M56 10l5 5-5 5M27 8l-6 14"/>',
+      shoulders('#4C5470') + `<path d="M19.6 53.4c3.8 3.6 8 5.4 12.4 5.4s8.6-1.8 12.4-5.4" fill="none" stroke="#7E88A8" stroke-width="3.6"/>` +
+      `<path d="M28 55.4v7M36 55.4v7" stroke="#D5DAEC" stroke-width="1.8" stroke-linecap="round"/>` +
+      head('#F7CFA6') + cheeks + smile +
+      `<path d="M15.8 34.4c-3-8.8.2-16.4 6.6-19.6-.2 2 .4 3.2 1.6 3.8 1.8-4.8 6.4-7 11.4-6-1 1.4-1.2 2.8-.4 4 3.8-2.8 9.2-2 12.2 1.6-2 .4-3 1.4-3.2 3 4.2 2 5.8 7 4.2 11.6-2.6-5-6.2-7.4-10.6-7.8-4.8 3.2-11.8 4.4-18.6 3.2-1.4 1.6-2.4 3.6-3.2 4.2z" fill="#1E1A30"/>` +
+      `<path d="M11.6 37c-1.4-14 7.4-23.4 20.4-23.4S53.8 23 52.4 37" fill="none" stroke="${INK}" stroke-width="5.6" stroke-linecap="round"/><path d="M11.6 37c-1.4-14 7.4-23.4 20.4-23.4S53.8 23 52.4 37" fill="none" stroke="#9AA3C4" stroke-width="2.8" stroke-linecap="round"/>` +
+      `<rect x="7.4" y="31" width="9.4" height="14" rx="4" fill="#E54B4B" ${ln}/><rect x="47.2" y="31" width="9.4" height="14" rx="4" fill="#E54B4B" ${ln}/>` +
+      `<circle cx="25.4" cy="36" r="5.8" fill="#fff" fill-opacity=".35" stroke="${INK}" stroke-width="2.6"/><circle cx="38.6" cy="36" r="5.8" fill="#fff" fill-opacity=".35" stroke="${INK}" stroke-width="2.6"/>` +
+      `<path d="M31.2 35.6h1.6" stroke="${INK}" stroke-width="2.4"/><circle cx="25.6" cy="36.4" r="1.9" fill="${INK}"/><circle cx="38.4" cy="36.4" r="1.9" fill="${INK}"/>`),
+    // 廟公：光頭、白眉白鬍、手持三炷香、唐裝佛珠
+    temple: (c) => wrap(c, '<path d="M8 20c-4-3 0-6-2-9M14 10c-3-3 1-5-1-8M6 44c-3-2 0-5-2-7"/>',
+      shoulders('#E9B949') + `<path d="M32 51.4V66" stroke="${INK}" stroke-width="1.6"/>` +
+      [17.6, 21.6, 25.8, 30, 34.2, 38.4, 42.6, 46.6].map((x, k) => `<circle cx="${x}" cy="${52.6 + [1.6, 4.2, 6, 6.8, 6.8, 6, 4.2, 1.6][k]}" r="2" fill="#8B4A2B" ${lnT}/>`).join('') +
+      head('#EDB689') + cheeks + happyEyes +
+      `<path d="M23.4 21.6c2.8-2.4 6.6-3.4 10-3" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".55"/>` +
+      `<path d="M15.6 34.6c-1.8-3.4-.6-7 2.4-8.4.2 3 1.2 5.4 2.8 7zM48.4 34.6c1.8-3.4.6-7-2.4-8.4-.2 3-1.2 5.4-2.8 7z" fill="#F4F4FA" ${lnT}/>` +
+      `<path d="M20.2 32.4c2.2-3 6.8-3.4 9.6-.8-3.2.4-6.4.8-9.6.8zM43.8 32.4c-2.2-3-6.8-3.4-9.6-.8 3.2.4 6.4.8 9.6.8z" fill="#F4F4FA" ${lnT}/>` +
+      `<path d="M22 42.6c1.6 8.2 5.2 14.2 10 16.4 4.8-2.2 8.4-8.2 10-16.4-3 2.4-6.4 3.4-10 3.4s-7-1-10-3.4z" fill="#F4F4FA" ${ln}/>` +
+      `<path d="M26.4 42.4c1.8-1.6 3.8-1.6 5.6-.2 1.8-1.4 3.8-1.4 5.6.2-2 1-3.8 1.2-5.6.6-1.8.6-3.6.4-5.6-.6z" fill="#F4F4FA" ${lnT}/>` +
+      `<path d="M47.2 64 50.6 27.6M51 64l2.2-36.6M54.8 64l1.2-36" stroke="#9C5A23" stroke-width="2" stroke-linecap="round"/>` +
+      `<circle cx="50.6" cy="27.2" r="1.7" fill="#FF4D4D"/><circle cx="53.2" cy="27" r="1.7" fill="#FF4D4D"/><circle cx="56" cy="27.6" r="1.7" fill="#FF4D4D"/>` +
+      `<path d="M50.6 24.6c-2.2-3 2.2-5 0-8.4M55.6 25c2.2-3.2-2-5.6.6-9" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>`),
+    // 外送員：大圓安全帽、背後的大外送箱
+    rider: (c) => wrap(c, '<path d="M2 18h12M0 26h10M2 34h8"/>',
+      `<rect x="35.6" y="22.4" width="26" height="26" rx="3.4" fill="#FF8C42" ${ln}/><path d="M35.6 30.4h26" ${ln}/><circle cx="49" cy="39.6" r="4.2" fill="#fff" ${lnT}/><path d="M47.4 39.6h3.2M49 38v3.2" stroke="#FF8C42" stroke-width="1.6" stroke-linecap="round"/>` +
+      shoulders('#3F3D6B') + `<path d="M23 53.4l-1.8 12.6M41 53.4l1.8 12.6" stroke="#FFD166" stroke-width="2.8"/>` +
+      head('#EDB689') + cheeks + eyes + grin +
+      `<path d="M12.8 39.4c-2.4-16.6 6.4-26.4 19.2-26.4s21.6 9.8 19.2 26.4c-.6 2-2 2.6-3.4 1.8-1-11.6-6.6-17.2-15.8-17.2s-14.8 5.6-15.8 17.2c-1.4.8-2.8.2-3.4-1.8z" fill="#FDFDFF" ${ln}/>` +
+      `<path d="M17.4 21.6c4.2-3.8 9-5.6 14.6-5.6s10.4 1.8 14.6 5.6" fill="none" stroke="#7B4FD6" stroke-width="4"/>` +
+      `<path d="M15.6 28.4c4.8-2.8 10.4-4.2 16.4-4.2s11.6 1.4 16.4 4.2" fill="none" stroke="#5DC8F5" stroke-width="3.2"/>` +
+      `<path d="M16.6 41c1.4 5.8 4.8 9.4 8.6 10.8M47.4 41c-1.4 5.8-4.8 9.4-8.6 10.8" fill="none" stroke="${INK}" stroke-width="1.5"/>`),
+    // 菜市場阿姨：蓬蓬的燙捲髮、大金耳環、紅唇、茄芷袋插著青蔥
+    auntie: (c) => wrap(c, '<circle cx="54" cy="12" r="3"/><circle cx="58" cy="22" r="1.6"/><circle cx="48" cy="6" r="1.6"/>',
+      shoulders('#F7A1C4') +
+      [[20, 58], [29, 62], [38, 58.6], [46, 62], [52.6, 57]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.4" fill="#fff"/><circle cx="${x}" cy="${y}" r="1.1" fill="#F0A500"/>`).join('') +
+      [[17.4, 31], [15.4, 24.4], [18.6, 17.8], [24.6, 13], [31.6, 11.2], [38.8, 12.4], [45, 16.6], [48.6, 23.4], [47.6, 30.6], [21.6, 22], [28.2, 17.6], [35.8, 17.2], [42.4, 21.6]]
+        .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5.8" fill="#4A1D3D" ${lnT}/>`).join('') +
+      head('#EDB689') + cheeks + happyEyes +
+      `<path d="M25.8 42.4q6.2 7.8 12.4 0z" fill="#fff" stroke="#C81D4E" stroke-width="2" stroke-linejoin="round"/>` +
+      `<path d="M17.2 33.2c2-4.6 6.8-7.4 14.8-7.4s12.8 2.8 14.8 7.4c-2.6-2.6-6.4-3.8-9.6-3.6-1.6 1.6-3.4 2.2-5.2 2.2s-3.6-.6-5.2-2.2c-3.2-.2-7 1-9.6 3.6z" fill="#4A1D3D"/>` +
+      `<circle cx="14.4" cy="45" r="3.2" fill="none" stroke="#F0A500" stroke-width="2.4"/><circle cx="49.6" cy="45" r="3.2" fill="none" stroke="#F0A500" stroke-width="2.4"/>` +
+      `<path d="M7.6 46.6 4 31.4M11.4 46.4l1.6-15.6" stroke="#3DBB5C" stroke-width="3" stroke-linecap="round"/><path d="M6.8 45.8l-.9-3.6M11.6 45.6l.3-3.6" stroke="#fff" stroke-width="3" stroke-linecap="round"/>` +
+      `<path d="M1 47h17.4l2.2 17H-1z" fill="#fff" ${ln}/><path d="M.6 51.6h18.6" stroke="#D7263D" stroke-width="2.6"/><path d="M.2 56.4h19.6" stroke="#2F6FED" stroke-width="2.6"/><path d="M-.2 61h20.4" stroke="#3DBB5C" stroke-width="2.6"/>`),
+    // 補習班名師：整齊旁分、方框眼鏡、耳掛麥克風、紅領結、背心
+    teacher: (c) => wrap(c, '<path d="M6 10h8M10 6v8M50 52l8 8M58 52l-8 8M48 10h10M48 14h10"/>',
+      shoulders('#FFFFFF') +
+      `<path d="M11.4 58c3.2-4.4 9-6.6 13.6-6.8L32 62.6l7-11.4c4.6.2 10.4 2.4 13.6 6.8L57 66H7z" fill="#2E4A3A" ${ln}/>` +
+      `<path d="M26.2 52.6l5.8 2.8 5.8-2.8v6l-5.8-2.8-5.8 2.8z" fill="#D7263D" ${lnT}/>` +
+      head('#F7CFA6') + cheeks + smile +
+      `<path d="M16 34c-1-10.4 5.6-17.2 16-17.2 9.6 0 16 5.8 15.8 16-2.8-3.8-6.2-6-10.4-7-1.8 1.8-5.2 3-9.4 3.2-4.2.2-8.6 1.6-12 5z" fill="#3A2E4E"/>` +
+      `<path d="M37.4 25.8c-1.2-3-3-5.4-5.4-7" fill="none" stroke="#fff" stroke-width="1.2" opacity=".4"/>` +
+      `<rect x="19.4" y="31.6" width="11" height="8.4" rx="1.6" fill="#fff" fill-opacity=".35" stroke="${INK}" stroke-width="2.4"/><rect x="33.6" y="31.6" width="11" height="8.4" rx="1.6" fill="#fff" fill-opacity=".35" stroke="${INK}" stroke-width="2.4"/>` +
+      `<path d="M30.4 35.2h3.2" stroke="${INK}" stroke-width="2.2"/><circle cx="25" cy="36" r="1.9" fill="${INK}"/><circle cx="39" cy="36" r="1.9" fill="${INK}"/>` +
+      `<path d="M49.6 36.6c1.8 6.8-1.6 11.2-8.6 11" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/><circle cx="40.2" cy="47.6" r="2.6" fill="${INK}"/>`),
   };
   function avatar(k, color) { return (AV[k] || AV.agent)(color); }
 
@@ -2326,9 +2382,23 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       $('#tokens').appendChild(el);
       A.tokEls.set(p.id, el);
     }
-    if (el._ch !== p.ch) { el.innerHTML = avatarSVG(p.ch); el._ch = p.ch; }
+    if (el._ch !== p.ch) { el.innerHTML = avatarSVG(p.ch); el._ch = p.ch; el._god = null; }
     el.title = p.nick;
     return el;
+  }
+  function tokGod(el, p, i) {
+    const k = p.god ? p.god.k : '';
+    let b = el.querySelector('.gb');
+    if (!k) { if (b) b.remove(); el._god = ''; return; }
+    if (!b) { b = document.createElement('button'); b.type = 'button'; b.dataset.act = 'godInfo'; el.appendChild(b); }
+    b.dataset.i = i;
+    if (el._god === k) return;
+    el._god = k;
+    const g = E.GODS[k];
+    b.className = 'gb ' + (g.good ? 'good' : 'bad');
+    b.setAttribute('aria-label', `${p.nick} 身上的${g.n}，點一下看效果`);
+    b.title = `${g.n}：${g.x}`;
+    b.innerHTML = ART.icon(k);
   }
   function layoutTokens(s, skipId) {
     if (!s) return;
@@ -2347,6 +2417,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       const g = groups[q];
       g.forEach((p, k) => {
         const el = tokenEl(p);
+        tokGod(el, p, s.ps.indexOf(p));
         const [x, y] = slotXY(+q, k, g.length);
         el.style.transform = `translate(${x}px, ${y}px)`;
         el.classList.toggle('cur', !!cur && cur.id === p.id);
@@ -2354,7 +2425,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
     }
     if (skipId) {
       const p = list.find((x) => x.id === skipId);
-      if (p) tokenEl(p).classList.toggle('cur', !!cur && cur.id === p.id);
+      if (p) { const el = tokenEl(p); tokGod(el, p, s.ps.indexOf(p)); el.classList.toggle('cur', !!cur && cur.id === p.id); }
     }
   }
   function clearTokens() {
@@ -2811,7 +2882,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
     const out = [];
     if (P.god) {
       const g = E.GODS[P.god.k];
-      out.push(`<span class="chip ${g.good ? 'good' : 'bad'}" title="${esc(g.x)}">${ART.icon(P.god.k)}${g.n}${withText ? ` 剩 ${P.god.d} 回合` : ` ${P.god.d}`}</span>`);
+      out.push(`<button type="button" class="chip ${g.good ? 'good' : 'bad'}" data-act="godInfo" data-i="${s.ps.indexOf(P)}" title="${esc(g.x)}" aria-label="${g.n}附身，剩 ${P.god.d} 回合，點一下看效果">` +
+        `${ART.icon(P.god.k)}${g.n}${withText ? ` 剩 ${P.god.d} 回合` : ` ${P.god.d}`}<span class="q" aria-hidden="true">?</span></button>`);
     }
     if (P.jail > 0) out.push(`<span class="chip plain bad">坐牢 ${P.jail} 天</span>`);
     if (P.hosp > 0) out.push(`<span class="chip plain bad">住院 ${P.hosp} 天</span>`);
@@ -3022,6 +3094,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       case 'card': return cardDlgHTML(d.arg);
       case 'shop': return s && s.st === 'play' ? shopHTML() : '';
       case 'bank': return s && s.st === 'play' ? bankHTML() : '';
+      case 'god': return s && s.st === 'play' ? godHTML(d.arg) : '';
       case 'market': return s && s.st === 'play' ? marketHTML() : '';
       case 'trade': return s && s.st === 'play' ? tradeHTML(d.arg) : '';
       default: return '';
@@ -3039,7 +3112,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
         <li>每回合可以用一張卡片：遙控骰子、路障、地雷、均富卡、查稅卡、購地卡、天使卡等等。免費卡和免罪卡會在需要時自動生效。</li>
       </ul>
       <h4>神明、股市、銀行</h4><ul>
-        <li>停在土地公廟會擲筊：聖筊請來財神、福神或土地公，笑筊點數 +30，陰筊可能招來衰神或窮神。衰神、窮神會在你超車時跳到對方身上。</li>
+        <li>停在土地公廟會擲筊：聖筊請來財神、福神或土地公，笑筊點數 +30，陰筊可能招來衰神或窮神。衰神、窮神會在你超車時跳到對方身上。點玩家身上或棋子旁的神明圖示，可以看祂的效果。</li>
         <li>股市每天開盤漲跌，自己回合隨時可以買賣。新聞和紅卡、黑卡會讓股價大漲大跌。股市區會顯示你每檔股票的買入均價，點進去可以看帳面損益。</li>
         <li>存款每天有 1% 利息，而且不怕均富卡、查稅卡。自己的回合隨時可以存款、提款：經過或停在銀行的那一回合提款免手續費，其他時候提款收 ${Math.round(E.WD_FEE * 100)}% 手續費。現金不夠付錢時（包括別人回合要付的小費、禮金），會先從存款緊急提領，扣 10% 手續費；還不夠就自動賣掉剛好夠付的股票，再不夠才拆賣建築和土地。</li>
       </ul>
@@ -3192,6 +3265,32 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       (items ? `<div class="shopgrid">${items}</div>` : '<p class="empty">卡片都賣完了。</p>') +
       `<div class="foot"><button class="btn go" type="button" data-act="shopDone"${canAct() ? '' : ' disabled'} data-focus>離開卡片屋</button></div>` +
       '<p class="hint">按右上角 × 只是先收起來，點「回到卡片屋」就能再進來。離開卡片屋後，結束回合前也還能回來。</p>';
+  }
+  function godHTML(i) {
+    const s = A.s;
+    const P = s.ps[i];
+    if (!P || !P.god) return '';
+    const k = P.god.k, g = E.GODS[k];
+    const mine = A.mode !== 'local' && i === meIdx(s);
+    const who = mine ? '你' : esc(P.nick);
+    const notes = [`每次輪到${who}結束回合，就少 1 回合；減到 0，神明就離開。`];
+    if (g.good) notes.push('好神明不會跳到別人身上，待滿回合才走。');
+    else {
+      notes.push(`${who}走路時超過別人（經過或停在同一格），${g.n}會跳到那個人身上，剩下的回合數照算。對方身上已經有神明，或是廟公阿福，就不會跳過去。`);
+      notes.push('用「送神卡」可以馬上送走。');
+    }
+    const list = Object.keys(E.GODS).map((x) => {
+      const G = E.GODS[x];
+      return `<li${x === k ? ' class="on"' : ''}><span class="gi ${G.good ? 'good' : 'bad'}">${ART.icon(x)}</span>` +
+        `<div><b>${G.n}</b><span class="tag${G.good ? '' : ' red'}">${G.good ? '好神明' : '壞神明'}</span><p>${esc(G.x)}</p></div></li>`;
+    }).join('');
+    return `${xBtn}<h3 id="dlgTitle">${g.n}附身</h3>` +
+      `<div class="godhero ${g.good ? 'good' : 'bad'}"><span class="gi">${ART.icon(k)}</span>` +
+      `<div><p class="sub">${who}身上，還有 ${P.god.d} 回合${g.good ? '' : '，快想辦法甩掉'}</p><p class="gx">${esc(g.x)}</p></div></div>` +
+      `<ul class="gnotes">${notes.map((t) => `<li>${t}</li>`).join('')}</ul>` +
+      `<h4>所有神明</h4><ul class="glist">${list}</ul>` +
+      `<p class="hint">神明會從土地公廟擲筊、機會命運卡和新聞找上門。</p>` +
+      `<div class="foot"><button class="btn" type="button" data-act="closeDlg" data-focus>知道了</button></div>`;
   }
   function bankHTML() {
     const s = A.s;
@@ -3650,6 +3749,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       case 'openShop': A.shopHold = false; openDlg('shop'); return;
       case 'openHand': openDlg('hand'); return;
       case 'openBank': openDlg('bank'); return;
+      case 'godInfo': openDlg('god', +d.i); return;
       case 'openMarket': openDlg('market'); return;
       case 'openTrade': openDlg('trade', +d.k); return;
       case 'openCard': openDlg('card', d.c); return;
@@ -4090,7 +4190,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
     renderAll();
     route();
     setInterval(housekeeping, 2000);
-    if (window.__GM_BROKERS) window.__MM = { state: () => A.s, pid: () => A.myPid, app: A };
+    if (window.__GM_BROKERS) window.__MM = { state: () => A.s, pid: () => A.myPid, app: A, render: () => { renderAll(); layoutTokens(A.s); } };
   }
   boot();
 })();
