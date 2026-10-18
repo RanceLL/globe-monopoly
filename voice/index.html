@@ -1123,6 +1123,9 @@ const RICH = (() => {
     s.offer = shuffle(CARD_IDS.slice(), rnd).slice(0, 5);
     s.ph = 'shop';
   }
+  // 這回合停在卡片屋、已經離開，而且還有卡片沒賣完，就可以走回去
+  const canShopBack = (s, i) => s.st === 'play' && s.turn === i && s.ph === 'end' && Array.isArray(s.offer) && s.offer.length > 0 &&
+    !!s.ps[i] && !s.ps[i].out && SQ[s.ps[i].pos].t === 'shop';
   function throwBlocks(s, i, rnd) {
     const r = rnd();
     const P = s.ps[i];
@@ -1651,7 +1654,11 @@ const RICH = (() => {
       }
       case 'shopDone':
         if (s.ph !== 'shop') return '現在不在卡片屋';
-        s.offer = null; s.ph = 'end';
+        s.ph = 'end';
+        break;
+      case 'shopBack':
+        if (!canShopBack(s, me)) return '現在不能回到卡片屋';
+        s.ph = 'shop';
         break;
       case 'bail':
         if (s.ph !== 'stay' || P.jail <= 0) return '你不在監獄裡';
@@ -1888,7 +1895,7 @@ const RICH = (() => {
     CHANCE, FATE, NEWS, START_CASH, START_DEP, START_PTS, SALARY, BAIL, HOSP_FEE, MAX_P, MAX_CARDS, DAY_OPTS, ITEM_RANGE,
     INTEREST, BANK_BONUS, STOCK_FEE, EMERG_FEE, WD_FEE,
     newTable, apply, botAct, netWorth, tollOf, buyPrice, buildCost, upCost, landValue, stockValue, cardPrice, stockFee, wdFee, costOf, avgCost,
-    cardReady, cardTargets, ownedIn, cleanNick, clone, dist, wrap, log: L,
+    cardReady, cardTargets, ownedIn, cleanNick, clone, dist, wrap, canShopBack, log: L,
   };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = RICH;
@@ -2643,7 +2650,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       case 'stay':
         if (P.hosp > 0) return mine ? `你在住院，還要住 ${P.hosp} 天。` : `${nm} 在住院，還要住 ${P.hosp} 天。`;
         return mine ? `你在監獄，還要關 ${P.jail} 天，可以繳保釋金出來。` : `${nm} 在監獄，還要關 ${P.jail} 天。`;
-      case 'end': return mine ? '這回合的事辦完了，可以結束回合。' : `等 <b>${esc(P.nick)}</b> 結束回合…`;
+      case 'end': return mine ? (E.canShopBack(s, s.turn) ? '這回合的事辦完了，可以結束回合。還想買卡，可以回到卡片屋。' : '這回合的事辦完了，可以結束回合。') : `等 <b>${esc(P.nick)}</b> 結束回合…`;
       default: return '';
     }
   }
@@ -2667,12 +2674,13 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
         return h + `<button class="btn" type="button" data-act="pass"${off}>不蓋</button>`;
       }
       case 'shop':
-        return `<button class="btn gold" type="button" data-act="openShop"${off}>打開卡片屋</button>`;
+        return `<button class="btn gold" type="button" data-act="openShop"${off}>回到卡片屋</button><button class="btn" type="button" data-act="shopDone"${off}>離開卡片屋</button>`;
       case 'stay':
         if (P.jail > 0) return `<button class="btn gold" type="button" data-act="bail"${off || (P.cash >= E.BAIL ? '' : ' disabled')}>繳保釋金 <span class="k">${money(E.BAIL)}</span></button><button class="btn" type="button" data-act="end"${off}>在牢裡等</button>`;
         return `<button class="btn" type="button" data-act="end"${off}>好好休息</button>`;
       case 'end':
-        return `<button class="btn go" type="button" data-act="end"${off}>結束回合</button>`;
+        return `<button class="btn go" type="button" data-act="end"${off}>結束回合</button>` +
+          (E.canShopBack(s, s.turn) && myTurn(s) ? `<button class="btn" type="button" data-act="shopBack"${off}>回到卡片屋</button>` : '');
       default: return '';
     }
   }
@@ -2933,12 +2941,13 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
     const d = A.dlg;
     A.dlg = null;
     $('#dlgBg').hidden = true;
-    if (d && d.kind === 'shop' && A.s && A.s.ph === 'shop' && myTurn()) submit({ t: 'shopDone' });
+    if (d && d.kind === 'shop') A.shopHold = true;
   }
   function autoDialogs() {
     const s = A.s;
     const shopNow = !!s && s.st === 'play' && s.ph === 'shop' && myTurn(s) && canSend();
-    if (shopNow && !busy() && !A.popOpen && (!A.dlg || A.dlg.kind !== 'shop') && A.shopShownK !== s.ver) {
+    if (!shopNow) A.shopHold = false;
+    if (shopNow && !A.shopHold && !busy() && !A.popOpen && (!A.dlg || A.dlg.kind !== 'shop') && A.shopShownK !== s.ver) {
       if (!A.dlg || ['hand', 'market', 'trade', 'deed'].includes(A.dlg.kind)) { A.shopShownK = s.ver; openDlg('shop'); }
     }
     if (A.dlg && A.dlg.kind === 'shop' && !shopNow) { A.dlg = null; $('#dlgBg').hidden = true; }
@@ -3178,10 +3187,11 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       const dis = !canAct() || full || P.pts < price;
       return `<div class="sitem" style="--cc:${cat.c}"><div class="top"><span>${cat.n}</span><span>${price} 點</span></div><div class="bd"><b>${esc(C.n)}</b><small>${esc(C.x)}</small><button class="btn small gold" type="button" data-act="buyCard" data-c="${c}"${dis ? ' disabled' : ''}>買下</button></div></div>`;
     }).join('');
-    return `<button class="x-btn x-close" type="button" data-act="closeDlg" aria-label="離開卡片屋">×</button><h3 id="dlgTitle">卡片屋</h3>` +
+    return `<button class="x-btn x-close" type="button" data-act="closeDlg" aria-label="先收起卡片屋，等一下再回來">×</button><h3 id="dlgTitle">卡片屋</h3>` +
       `<p class="sub">你有 <b class="num" style="color:var(--gold)">${P.pts}</b> 點，手牌 ${P.cards.length} / ${E.MAX_CARDS} 張${full ? '，手牌滿了' : ''}${E.CHARS[P.ch].sk === 'bargain' ? '，秀英姨買卡打八折' : ''}。</p>` +
       (items ? `<div class="shopgrid">${items}</div>` : '<p class="empty">卡片都賣完了。</p>') +
-      `<div class="foot"><button class="btn go" type="button" data-act="shopDone"${canAct() ? '' : ' disabled'} data-focus>離開卡片屋</button></div>`;
+      `<div class="foot"><button class="btn go" type="button" data-act="shopDone"${canAct() ? '' : ' disabled'} data-focus>離開卡片屋</button></div>` +
+      '<p class="hint">按右上角 × 只是先收起來，點「回到卡片屋」就能再進來。離開卡片屋後，結束回合前也還能回來。</p>';
   }
   function bankHTML() {
     const s = A.s;
@@ -3637,7 +3647,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       case 'kick': submit({ t: 'kick', i: +d.i }); return;
       case 'cfg': submit({ t: 'cfg', maxD: +d.v }); return;
       case 'up': submit({ t: 'up', lv: +d.lv }); return;
-      case 'openShop': openDlg('shop'); return;
+      case 'openShop': A.shopHold = false; openDlg('shop'); return;
       case 'openHand': openDlg('hand'); return;
       case 'openBank': openDlg('bank'); return;
       case 'openMarket': openDlg('market'); return;
@@ -3654,6 +3664,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       }
       case 'buyCard': submit({ t: 'buyCard', c: d.c }); return;
       case 'shopDone': A.dlg = null; $('#dlgBg').hidden = true; submit({ t: 'shopDone' }); return;
+      case 'shopBack': A.shopHold = false; submit({ t: 'shopBack' }); return;
       case 'bankFill': {
         const s = A.s, P = s && s.ps[meIdx(s)];
         const inp = $('#bankAmt');
