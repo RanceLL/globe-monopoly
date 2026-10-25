@@ -315,6 +315,8 @@ button.chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px;
 .srow .sh { font-size: 12px; color: var(--on-2); text-align: right; white-space: nowrap; }
 .srow .sh b { display: block; font-weight: 500; color: var(--on); }
 .srow .sh small { display: block; margin-top: 3px; font-size: 11px; }
+.srow .sh.short b { color: #8FD3FF; }
+.sheet .foot.shortrow { margin-top: 8px; }
 .up { color: #FF6B6B; }
 .down { color: #3DDC97; }
 .spark { width: 58px; height: 22px; }
@@ -639,6 +641,7 @@ const RICH = (() => {
   const MAX_P = 6, MAX_CARDS = 5, LOG_MAX = 80, ITEM_RANGE = 8;
   const DAY_OPTS = [20, 30, 45, 60];
   const INTEREST = 0.01, BANK_BONUS = 0.03, STOCK_FEE = 0.01, EMERG_FEE = 0.1, TAX_RATE = 0.1, WD_FEE = 0.05;
+  const BABY_MIN = 500, BABY_MAX = 2500;   // 小八的育兒補助金範圍
 
   // ---------- 角色（原創） ----------
   const CHARS = [
@@ -686,6 +689,7 @@ const RICH = (() => {
     cai: { n: '財神', good: true, d: 5, x: '收到的過路費加倍。' },
     fu: { n: '福神', good: true, d: 5, x: '買地、加蓋都半價。' },
     tu: { n: '土地公', good: true, d: 5, x: '停在沒人的城市可以免費佔地。' },
+    ba: { n: '小八', good: true, d: 5, x: '每回合結束時，從政府領一筆育兒補助金，金額隨機（$500 到 $2,500）。' },
     shuai: { n: '衰神', good: false, d: 5, x: '付出的過路費加倍。超車時會跳到對方身上。' },
     qiong: { n: '窮神', good: false, d: 5, x: '經過起點領不到薪水，每回合現金少 5%。超車時會跳到對方身上。' },
   };
@@ -715,6 +719,7 @@ const RICH = (() => {
     { x: '夜市擺攤生意好，賺了 $1,500。', e: 'gain', v: 1500 },
     { x: '前往大樂透碰碰運氣。', e: 'to', v: LOTTO },
     { x: '土地公託夢，土地公附身。', e: 'god', v: 'tu' },
+    { x: '小八來報到，小八附身：接下來每回合都能領政府的育兒補助金。', e: 'god', v: 'ba' },
     { x: '倒車入庫失敗，後退 3 格。', e: 'back', v: 3 },
   ];
   const FATE = [
@@ -782,7 +787,7 @@ const RICH = (() => {
 
   function netWorth(s, i) {
     const P = s.ps[i];
-    let w = P.cash + P.dep + stockValue(s, P);
+    let w = P.cash + P.dep + stockValue(s, P) + shortValue(s, P);
     for (const k in s.own) if (s.own[k].o === i) w += landValue(s, +k);
     return w;
   }
@@ -818,6 +823,29 @@ const RICH = (() => {
     if (!Array.isArray(P.cst)) P.cst = P.stk.map(() => 0);
     P.cst[k] = Math.max(0, Math.round(v));
   }
+  // 做空：押一筆和股價等值的保證金。ss[k] 是空單股數，sc[k] 是押下的保證金總額（做空均價 = sc ÷ ss）。
+  // 空單現值 = 2 × 保證金 − 現價 × 股數（最少 0）：股價跌多少就賺多少，漲到做空均價的兩倍時保證金賠光、強制回補。
+  const shortOf = (P, k) => (P.ss && P.ss[k]) || 0;
+  const shortCol = (P, k) => (P.sc && P.sc[k]) || 0;
+  const shortAvg = (P, k) => (shortOf(P, k) ? shortCol(P, k) / shortOf(P, k) : 0);
+  const shortVal = (s, P, k) => (shortOf(P, k) && s.stk[k] ? Math.max(0, Math.round(2 * shortCol(P, k) - shortOf(P, k) * s.stk[k].p)) : 0);
+  const shortValue = (s, P) => P.stk.reduce((t, n, k) => t + shortVal(s, P, k), 0);
+  function setShort(P, k, n, c) {
+    if (!Array.isArray(P.ss)) P.ss = P.stk.map(() => 0);
+    if (!Array.isArray(P.sc)) P.sc = P.stk.map(() => 0);
+    P.ss[k] = Math.max(0, n);
+    P.sc[k] = P.ss[k] ? Math.max(0, Math.round(c)) : 0;
+  }
+  // 回補 n 股：照做空均價拿回保證金，再加上（做空均價 − 現價）× 股數的賺賠
+  function coverCalc(s, P, k, n) {
+    const basis = Math.round(shortCol(P, k) * n / shortOf(P, k));
+    return { basis, back: Math.max(0, Math.round(2 * basis - s.stk[k].p * n)) };
+  }
+  function coverShort(s, P, k, n) {
+    const r = coverCalc(s, P, k, n);
+    setShort(P, k, shortOf(P, k) - n, shortCol(P, k) - r.basis);
+    return r;
+  }
 
   // ---------- 牌桌 ----------
   function newTable(rnd) {
@@ -832,7 +860,7 @@ const RICH = (() => {
   function newPlayer(id, nick, ch, bot) {
     return {
       id, nick, ch, bot: !!bot, auto: false, cash: 0, dep: 0, pts: 0, pos: 0, dir: 1, jail: 0, hosp: 0, turtle: 0,
-      cards: [], god: null, stk: STOCKS.map(() => 0), cst: STOCKS.map(() => 0), out: false, outAt: 0, bankOk: false,
+      cards: [], god: null, stk: STOCKS.map(() => 0), cst: STOCKS.map(() => 0), ss: STOCKS.map(() => 0), sc: STOCKS.map(() => 0), out: false, outAt: 0, bankOk: false,
     };
   }
   const freeChar = (s) => { for (let c = 0; c < CHARS.length; c++) if (!s.ps.some((p) => p.ch === c)) return c; return -1; };
@@ -980,6 +1008,21 @@ const RICH = (() => {
       }
       if (sold.length) parts.push(`賣掉股票（${sold.join('、')}）`);
     }
+    if (P.cash < need && Array.isArray(P.ss)) {
+      const sold = [];
+      const order = P.ss.map((n, k) => k).filter((k) => shortVal(s, P, k) > 0).sort((x, y) => shortVal(s, P, y) - shortVal(s, P, x));
+      for (const k of order) {
+        if (P.cash >= need) break;
+        const per = 2 * shortAvg(P, k) - s.stk[k].p;
+        if (per <= 0) continue;
+        let n = Math.min(shortOf(P, k), Math.ceil((need - P.cash) / per));
+        if (n < shortOf(P, k) && coverCalc(s, P, k, n).back < need - P.cash) n++;
+        const { back } = coverShort(s, P, k, n);
+        P.cash += back;
+        sold.push(`${STOCKS[k].n} ${n} 股 $${back.toLocaleString('en-US')}`);
+      }
+      if (sold.length) parts.push(`回補空單（${sold.join('、')}）`);
+    }
     let levels = 0, lands = 0, guard = 200;
     while (P.cash < need && guard-- > 0) {
       let best = -1;
@@ -1026,6 +1069,8 @@ const RICH = (() => {
     for (const k in s.own) if (s.own[k].o === i) delete s.own[k];
     P.stk = P.stk.map(() => 0);
     P.cst = P.stk.map(() => 0);
+    P.ss = P.stk.map(() => 0);
+    P.sc = P.stk.map(() => 0);
     P.cards = []; P.god = null; P.out = true; P.jail = 0; P.hosp = 0; P.turtle = 0; P.auto = false;
     P.outAt = s.ver * 100 + i;
     if (s.turn === i) { s.ph = 'end'; s.pend = -1; s.offer = null; }
@@ -1104,6 +1149,13 @@ const RICH = (() => {
         const loss = Math.round(P.cash * 0.05);
         if (loss > 0) { P.cash -= loss; s.pot += loss; L(s, { p: i }, ' 被窮神吸走 ', { m: loss }); }
       }
+      if (P.god.k === 'ba') {
+        // 小八：政府育兒補助金，$500 到 $2,500 之間隨機（以 $100 為單位）
+        const amt = BABY_MIN + 100 * Math.floor(rnd() * ((BABY_MAX - BABY_MIN) / 100 + 1));
+        P.cash += amt;
+        acc(s, 'subsidy', amt);
+        L(s, { p: i }, ' 托小八的福，領到政府育兒補助金 ', { m: amt });
+      }
       P.god.d--;
       if (P.god.d <= 0) { L(s, GODS[P.god.k].n, '離開了 ', { p: i }); P.god = null; }
     }
@@ -1164,7 +1216,7 @@ const RICH = (() => {
     let res, god = null;
     if (r < 0.5) {
       res = 'sheng';
-      god = ['cai', 'fu', 'tu'][Math.floor(rnd() * 3)];
+      god = ['cai', 'fu', 'tu', 'ba'][Math.floor(rnd() * 4)];
       L(s, { p: i }, ' 在土地公廟擲出聖筊');
       setGod(s, i, god);
     } else if (r < 0.75) {
@@ -1706,6 +1758,7 @@ const RICH = (() => {
         if (!Number.isInteger(qty) || !qty || Math.abs(qty) > 100000) return '請輸入股數';
         const price = s.stk[k].p;
         if (qty > 0) {
+          if (shortOf(P, k)) return '這檔股票有空單，先回補才能買進';
           const cost = Math.round(price * qty), fee = stockFee(P, cost);
           if (P.cash < cost + fee) return '現金不夠';
           P.cash -= cost + fee; s.pot += fee;
@@ -1722,6 +1775,31 @@ const RICH = (() => {
           const gain = got - fee - basis;
           L(s, { p: me }, ` 以每股 ${price.toFixed(1)} 賣出 ${STOCKS[k].n} ${n} 股，拿回 `, { m: got - fee },
             basis ? (gain >= 0 ? '，賺了 ' : '，賠了 ') : '', basis ? { m: Math.abs(gain) } : '');
+        }
+        s.tc.stk++;
+        break;
+      }
+      case 'short': {
+        if (!['roll', 'end', 'stay', 'buy', 'up'].includes(s.ph)) return '現在不能做空';
+        const k = a.i, qty = a.qty;
+        if (!Number.isInteger(k) || !s.stk[k]) return '沒有這檔股票';
+        if (!Number.isInteger(qty) || !qty || Math.abs(qty) > 100000) return '請輸入股數';
+        const price = s.stk[k].p;
+        if (qty > 0) {
+          if (P.stk[k]) return '你還持有這檔股票，先賣掉才能做空';
+          const col = Math.round(price * qty), fee = stockFee(P, col);
+          if (P.cash < col + fee) return '現金不夠押保證金';
+          P.cash -= col + fee; s.pot += fee;
+          setShort(P, k, shortOf(P, k) + qty, shortCol(P, k) + col);
+          L(s, { p: me }, ` 以每股 ${price.toFixed(1)} 做空 ${STOCKS[k].n} ${qty} 股，押了保證金 `, { m: col });
+        } else {
+          const n = -qty;
+          if (shortOf(P, k) < n) return '空單不夠';
+          const { basis, back } = coverShort(s, P, k, n);
+          const fee = Math.min(back, stockFee(P, Math.round(price * n)));
+          P.cash += back - fee; s.pot += fee;
+          const gain = back - fee - basis;
+          L(s, { p: me }, ` 以每股 ${price.toFixed(1)} 回補 ${STOCKS[k].n} ${n} 股，拿回 `, { m: back - fee }, gain >= 0 ? '，賺了 ' : '，賠了 ', { m: Math.abs(gain) });
         }
         s.tc.stk++;
         break;
@@ -1755,12 +1833,25 @@ const RICH = (() => {
     return null;
   }
 
+  // 股價漲到做空均價的兩倍（空單現值歸零），強制回補，保證金賠光
+  function marginCheck(s) {
+    if (s.st !== 'play') return;
+    s.ps.forEach((P, i) => {
+      if (P.out || !Array.isArray(P.ss)) return;
+      P.ss.forEach((n, k) => {
+        if (!n || !s.stk[k] || s.stk[k].p < 2 * shortAvg(P, k)) return;
+        const lost = shortCol(P, k);
+        setShort(P, k, 0, 0);
+        L(s, { p: i }, ` 做空的${STOCKS[k].n}漲到做空價的兩倍，空單被強制回補，保證金 `, { m: lost }, ' 賠光');
+      });
+    });
+  }
   // 回傳 {ok, s, err}；不修改傳入的狀態
   function apply(s0, pid, a, rnd) {
     rnd = rnd || Math.random;
     const s = clone(s0);
     let err;
-    try { err = handle(s, pid, a, rnd); } catch (e) { err = '規則出錯：' + (e && e.message ? e.message : e); }
+    try { err = handle(s, pid, a, rnd); if (!err) marginCheck(s); } catch (e) { err = '規則出錯：' + (e && e.message ? e.message : e); }
     delete s._rnd;
     if (err) return { ok: false, err, s: s0 };
     return { ok: true, s };
@@ -1867,10 +1958,13 @@ const RICH = (() => {
     if (s.tc.stk < 1) {
       for (let k = 0; k < STOCKS.length; k++) {
         if (P.stk[k] && (s.stk[k].p >= STOCKS[k].p * 1.25 || (P.cash < 2500 && P.stk[k] * s.stk[k].p > 500))) return { t: 'stk', i: k, qty: -P.stk[k] };
+        // 託管或離線時，電腦幫忙處理空單：賺兩成以上、或虧到五成就回補
+        const n = shortOf(P, k);
+        if (n && (s.stk[k].p <= shortAvg(P, k) * 0.8 || s.stk[k].p >= shortAvg(P, k) * 1.5)) return { t: 'short', i: k, qty: -n };
       }
       if (P.cash >= 9000) {
         let k = -1, r = 0.9;
-        s.stk.forEach((st, x) => { const ratio = st.p / STOCKS[x].p; if (ratio < r) { r = ratio; k = x; } });
+        s.stk.forEach((st, x) => { if (shortOf(P, x)) return; const ratio = st.p / STOCKS[x].p; if (ratio < r) { r = ratio; k = x; } });
         if (k >= 0) {
           const qty = Math.min(100, Math.floor((P.cash - 7000) / s.stk[k].p / 10) * 10);
           if (qty >= 10) return { t: 'stk', i: k, qty };
@@ -1927,6 +2021,7 @@ const RICH = (() => {
     CHANCE, FATE, NEWS, START_CASH, START_DEP, START_PTS, SALARY, BAIL, HOSP_FEE, MAX_P, MAX_CARDS, DAY_OPTS, ITEM_RANGE,
     INTEREST, BANK_BONUS, STOCK_FEE, EMERG_FEE, WD_FEE,
     newTable, apply, botAct, netWorth, tollOf, buyPrice, buildCost, upCost, landValue, stockValue, cardPrice, stockFee, wdFee, costOf, avgCost,
+    shortOf, shortCol, shortAvg, shortVal, shortValue,
     cardReady, cardTargets, ownedIn, cleanNick, clone, dist, wrap, canShopBack, log: L,
   };
 })();
@@ -2084,6 +2179,11 @@ const ART = (() => {
     cai: `<path d="M5 17.6c2.6 2 6.4 3 11 3s8.4-1 11-3l-1.6 6.6c-2.2 2-5.6 3-9.4 3s-7.2-1-9.4-3z" fill="#F6C445" ${ln}/><path d="M9 17.6c0-4.6 3.2-7.6 7-7.6s7 3 7 7.6c-2 .8-4.4 1.2-7 1.2s-5-.4-7-1.2z" fill="#FFD966" ${ln}/>`,
     fu: `<rect x="8" y="8" width="16" height="16" rx="1.4" fill="#D7263D" ${ln} transform="rotate(45 16 16)"/><text x="16" y="20.4" text-anchor="middle" font-size="11" font-weight="700" fill="#F6C445" transform="rotate(180 16 16)">福</text>`,
     tu: `<path d="M4 27h24" stroke="${INK}" stroke-width="2" stroke-linecap="round"/><path d="M8 27V15.6h16V27z" fill="#F1E9D2" ${ln}/><path d="M5.6 15.8 16 7.4l10.4 8.4z" fill="#1F9E89" ${ln}/><rect x="13.6" y="19.4" width="4.8" height="7.6" fill="#D7263D" ${lnT}/>`,
+    // 小八：奶瓶加一枚金幣（育兒補助金）
+    ba: `<path d="M13.4 8.6c0-2.8 1.1-4.8 2.6-4.8s2.6 2 2.6 4.8z" fill="#F4A261" ${ln}/><rect x="10" y="8.4" width="12" height="4.2" rx="1.4" fill="#4CC9F0" ${ln}/>` +
+      `<rect x="9.2" y="12.4" width="13.6" height="16.4" rx="4.2" fill="#FFFFFF" ${ln}/><path d="M10.2 19h11.6v5.4a3.4 3.4 0 0 1-3.4 3.4h-4.8a3.4 3.4 0 0 1-3.4-3.4z" fill="#FFF0C9"/>` +
+      `<path d="M18.4 15.4h2.6M18.4 18.4h2.6" stroke="#4CC9F0" stroke-width="1.5" stroke-linecap="round"/>` +
+      `<circle cx="23.4" cy="24.2" r="5.6" fill="#F6C445" ${ln}/><path d="M23.4 20.8v6.8M25.2 22.2c-.6-.8-3.8-1-3.8.6 0 1.8 3.8.8 3.8 2.6 0 1.4-3 1.4-3.8.4" fill="none" stroke="${INK}" stroke-width="1.3" stroke-linecap="round"/>`,
     shuai: `<path d="M8 19.4a5.4 5.4 0 0 1 1.6-10.6 7 7 0 0 1 13.2 1.4 4.6 4.6 0 0 1 .4 9.2z" fill="#6C6F86" ${ln}/><path d="M16.6 19.6 13.4 25h4.4l-2.6 5" fill="none" stroke="#F6C445" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 23v3M22 23v3" stroke="#4CC9F0" stroke-width="2" stroke-linecap="round"/>`,
     qiong: `<path d="M5 14h22l-2.6 12.6c-.4 1.6-1.6 2.4-3 2.4H10.6c-1.4 0-2.6-.8-3-2.4z" fill="#B08968" ${ln}/><path d="M4 14h24" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/><path d="M14 14l2 5-2.4 4 3.4 5" fill="none" stroke="${INK}" stroke-width="1.6" stroke-linecap="round"/><path d="M21 7.6c1.4-1.4 3-1.4 4.2 0M23.6 9.6v1" fill="none" stroke="${INK}" stroke-width="1.4" stroke-linecap="round"/>`,
   };
@@ -2548,10 +2648,11 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
     for (const e of ns.log) {
       if (e.k <= lastK || !Array.isArray(e.s) || !e.s[0] || e.s[0].p == null) continue;
       const i = e.s[0].p, msg = e.s[1];
-      if (typeof msg !== 'string' || msg.indexOf('現金不夠') < 0) continue;
+      if (typeof msg !== 'string' || (msg.indexOf('現金不夠') < 0 && msg.indexOf('強制回補') < 0)) continue;
       const P = ns.ps[i];
       if (!P || P.bot || (A.mode !== 'local' && i !== me)) continue;
-      toast(`${A.mode === 'local' ? P.nick : '你'}的${msg.trim()}`, 'bad', 8000);
+      const rest = e.s.slice(1).map((x) => segText(x, ns)).join('').trim();
+      toast(`${A.mode === 'local' ? P.nick : '你'}${msg.indexOf('現金不夠') >= 0 ? '的' : ''}${rest}`, 'bad', 8000);
     }
   }
   function queueVisual(prev, ns) {
@@ -2902,6 +3003,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
     const worth = E.netWorth(s, me);
     const stv = E.stockValue(s, P);
     const gain = stv - P.stk.reduce((t, n, k) => t + E.costOf(P, k), 0);
+    const shv = E.shortValue(s, P), shCol = P.stk.reduce((t, n, k) => t + E.shortCol(P, k), 0);
     const auto = s.st === 'play' && !P.out ? `<label class="hint" style="display:flex;align-items:center;gap:8px;margin-top:12px"><input type="checkbox" data-act="auto"${P.auto ? ' checked' : ''}${canSend() && !A.pending ? '' : ' disabled'}> 託管（交給電腦代打）</label>` : '';
     const isStarter = s.starter === (A.mode === 'local' ? P.id : A.myPid);
     const ext = s.st === 'play' && !P.out ? `<div class="row"><button class="btn small" type="button" data-act="openBank"${canAct() ? '' : ' disabled'}>存款、提款</button>` +
@@ -2911,6 +3013,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       `<p class="w-cash">${money(P.cash)}<small>現金</small></p>` +
       `<div class="w-row"><div><span>存款</span><b>${money(P.dep)}</b></div><div><span>點數</span><b>${P.pts}</b></div><div><span>總資產</span><b>${money(worth)}</b></div></div>` +
       (stv ? `<p class="hint" style="margin-top:8px">股票市值 ${money(stv)}，帳面損益${gainTxt(gain)}</p>` : '') +
+      (shv || shCol ? `<p class="hint" style="margin-top:${stv ? 2 : 8}px">空單價值 ${money(shv)}，帳面損益${gainTxt(shv - shCol)}</p>` : '') +
       `<div class="chips">${statusChips(s, P, true)}</div>` +
       `<p class="skill"><b>技能：</b>${esc(c.x)}${P.bankOk && s.turn === me ? '　這回合經過銀行，提款免手續費。' : ''}</p>` + ext + auto);
   }
@@ -2938,6 +3041,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
   const gainTxt = (g) => ` <span class="${g > 0 ? 'up' : g < 0 ? 'down' : ''}">${g > 0 ? '+' : g < 0 ? MINUS : ''}${money(Math.abs(g))}</span>`;
   function holdCell(P, k) {
     const held = P ? P.stk[k] : 0;
+    const sh = P ? E.shortOf(P, k) : 0;
+    if (sh) return `<span class="sh short"><b>空 ${sh} 股</b><small>均價 ${E.shortAvg(P, k).toFixed(1)}</small></span>`;
     if (!held) return '<span class="sh"></span>';
     const avg = E.avgCost(P, k);
     return `<span class="sh"><b>${held} 股</b>${avg ? `<small>均價 ${avg.toFixed(1)}</small>` : ''}</span>`;
@@ -2954,7 +3059,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       const held = P ? P.stk[k] : 0;
       return `<button class="srow" type="button" data-act="openTrade" data-k="${k}"><span class="sn">${esc(E.STOCKS[k].n)}</span>${sparkSVG(st.h.concat(st.p !== st.h[st.h.length - 1] ? [st.p] : []), 58, 22, 'spark')}` +
         `<span><span class="sp" style="display:block">${st.p.toFixed(1)}</span><span class="sc ${ch > 0 ? 'up' : ch < 0 ? 'down' : ''}" style="display:block">${pct(ch)}</span></span>${holdCell(P, k)}</button>`;
-    }).join('')}</div><p class="stk-note">紅色是漲、綠色是跌。均價是你買進的平均價格。買賣收 1% 手續費，工程師免收。</p>`);
+    }).join('')}</div><p class="stk-note">紅色是漲、綠色是跌。均價是你買進（或做空）的平均價格，「空」是做空的股數。買賣收 1% 手續費，工程師免收。</p>`);
   }
 
   // ---- 玩家 ----
@@ -3072,14 +3177,23 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       const t = [];
       if (q > 0) {
         const cost = Math.round(price * q), fee = E.stockFee(P, cost);
-        t.push(`買進 ${q} 股：${money(cost)}${fee ? `，加手續費 ${money(fee)}，共 ${money(cost + fee)}` : ''}。`);
+        if (!E.shortOf(P, k)) t.push(`買進 ${q} 股：${money(cost)}${fee ? `，加手續費 ${money(fee)}，共 ${money(cost + fee)}` : ''}。`);
         const left = P.cash - cost - fee;
-        if (left >= 0 && left < 2000) t.push(`買完現金只剩 ${money(left)}。之後付不出錢時，會先動用存款，再自動賣掉一部分股票。`);
+        if (!E.shortOf(P, k) && left >= 0 && left < 2000) t.push(`買完現金只剩 ${money(left)}。之後付不出錢時，會先動用存款，再自動賣掉一部分股票。`);
         if (held && q <= held) {
           const got = Math.round(price * q), sfee = E.stockFee(P, got);
           const gain = got - sfee - Math.round(E.costOf(P, k) * q / held);
           t.push(`賣出 ${q} 股：拿回 ${money(got - sfee)}，${gain >= 0 ? '賺' : '賠'} ${money(Math.abs(gain))}。`);
         } else if (held) t.push(`你只有 ${held} 股可以賣。`);
+        const sh = E.shortOf(P, k);
+        if (!held && !sh) {
+          const col = Math.round(price * q), sfee = E.stockFee(P, col);
+          t.push(`做空 ${q} 股：押保證金 ${money(col)}${sfee ? `，加手續費 ${money(sfee)}` : ''}。股價跌就賺，漲到 ${(price * 2).toFixed(1)} 會被強制回補。`);
+        } else if (sh && q <= sh) {
+          const basis = Math.round(E.shortCol(P, k) * q / sh), back = Math.max(0, Math.round(2 * basis - price * q));
+          const cfee = Math.min(back, E.stockFee(P, Math.round(price * q))), gain = back - cfee - basis;
+          t.push(`回補 ${q} 股：拿回 ${money(back - cfee)}，${gain >= 0 ? '賺' : '賠'} ${money(Math.abs(gain))}。`);
+        } else if (sh) t.push(`你只做空了 ${sh} 股。`);
       }
       setHTML(tn, lines(t));
     }
@@ -3112,8 +3226,9 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
         <li>每回合可以用一張卡片：遙控骰子、路障、地雷、均富卡、查稅卡、購地卡、天使卡等等。免費卡和免罪卡會在需要時自動生效。</li>
       </ul>
       <h4>神明、股市、銀行</h4><ul>
-        <li>停在土地公廟會擲筊：聖筊請來財神、福神或土地公，笑筊點數 +30，陰筊可能招來衰神或窮神。衰神、窮神會在你超車時跳到對方身上。點玩家身上或棋子旁的神明圖示，可以看祂的效果。</li>
+        <li>停在土地公廟會擲筊：聖筊請來財神、福神、土地公或小八，笑筊點數 +30，陰筊可能招來衰神或窮神。衰神、窮神會在你超車時跳到對方身上。點玩家身上或棋子旁的神明圖示，可以看祂的效果。</li>
         <li>股市每天開盤漲跌，自己回合隨時可以買賣。新聞和紅卡、黑卡會讓股價大漲大跌。股市區會顯示你每檔股票的買入均價，點進去可以看帳面損益。</li>
+        <li>看跌可以做空：押一筆和股價等值的保證金，股價跌多少就賺多少，隨時可以回補。股價漲到做空均價的兩倍會被強制回補，保證金賠光。同一檔股票不能同時持有和做空。</li>
         <li>存款每天有 1% 利息，而且不怕均富卡、查稅卡。自己的回合隨時可以存款、提款：經過或停在銀行的那一回合提款免手續費，其他時候提款收 ${Math.round(E.WD_FEE * 100)}% 手續費。現金不夠付錢時（包括別人回合要付的小費、禮金），會先從存款緊急提領，扣 10% 手續費；還不夠就自動賣掉剛好夠付的股票，再不夠才拆賣建築和土地。</li>
       </ul>
       <h4>語音</h4><ul>
@@ -3312,7 +3427,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
     const s = A.s;
     const me = meIdx(s);
     const P = me >= 0 ? s.ps[me] : null;
-    return `${xBtn}<h3 id="dlgTitle">股市</h3><p class="sub">點一檔股票來買賣。紅色是漲、綠色是跌。</p><div class="stks">${s.stk.map((st, k) => {
+    return `${xBtn}<h3 id="dlgTitle">股市</h3><p class="sub">點一檔股票來買賣或做空。紅色是漲、綠色是跌。</p><div class="stks">${s.stk.map((st, k) => {
       const ch = st.o ? st.p / st.o - 1 : 0;
       return `<button class="srow" type="button" data-act="openTrade" data-k="${k}"><span class="sn">${esc(E.STOCKS[k].n)}</span>${sparkSVG(st.h, 58, 22, 'spark')}<span><span class="sp" style="display:block">${st.p.toFixed(1)}</span><span class="sc ${ch > 0 ? 'up' : ch < 0 ? 'down' : ''}" style="display:block">${pct(ch)}</span></span>${holdCell(P, k)}</button>`;
     }).join('')}</div>`;
@@ -3326,6 +3441,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
     const ch = st.o ? st.p / st.o - 1 : 0;
     const ok = !!P && canAct() && ['roll', 'end', 'stay', 'buy', 'up'].includes(s.ph);
     const held = P ? P.stk[k] : 0;
+    const sh = P ? E.shortOf(P, k) : 0;
     const maxBuy = P ? Math.max(0, Math.floor(P.cash / (st.p * 1.011) / 10) * 10) : 0;
     const feeTxt = P && E.CHARS[P.ch].sk === 'stock' ? '工程師買賣免手續費。' : '買賣收 1% 手續費（最少 $10），進大樂透彩金。';
     let mine = '';
@@ -3336,14 +3452,23 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
         `<div><span>帳面損益</span><b class="${cls}">${gain > 0 ? '+' : gain < 0 ? MINUS : ''}${money(Math.abs(gain))}</b></div>` +
         `<div><span>報酬率</span><b class="${cls}">${pct(ret)}</b></div></div>`;
     }
+    if (P && sh) {
+      const col = E.shortCol(P, k), gain = E.shortVal(s, P, k) - col;
+      const cls = gain > 0 ? 'up' : gain < 0 ? 'down' : '';
+      mine = `<div class="kv" style="margin-top:8px"><div><span>做空均價</span><b>${E.shortAvg(P, k).toFixed(1)}</b></div>` +
+        `<div><span>帳面損益</span><b class="${cls}">${gain > 0 ? '+' : gain < 0 ? MINUS : ''}${money(Math.abs(gain))}</b></div>` +
+        `<div><span>強制回補價</span><b>${(E.shortAvg(P, k) * 2).toFixed(1)}</b></div></div>`;
+    }
     return `${xBtn}<h3 id="dlgTitle">${esc(E.STOCKS[k].n)}</h3>` +
-      `<div class="kv"><div><span>股價</span><b>${st.p.toFixed(1)}</b></div><div><span>今天</span><b class="${ch > 0 ? 'up' : ch < 0 ? 'down' : ''}">${pct(ch)}</b></div><div><span>你持有</span><b>${held} 股</b></div></div>` + mine +
+      `<div class="kv"><div><span>股價</span><b>${st.p.toFixed(1)}</b></div><div><span>今天</span><b class="${ch > 0 ? 'up' : ch < 0 ? 'down' : ''}">${pct(ch)}</b></div><div><span>${sh ? '你做空' : '你持有'}</span><b>${sh || held} 股</b></div></div>` + mine +
       sparkSVG(st.h.concat(st.p !== st.h[st.h.length - 1] ? [st.p] : []), 300, 90, 'bigchart') +
       `<p class="hint">${feeTxt}${P ? `你有現金 ${money(P.cash)}，最多可以買 ${maxBuy} 股。` : ''}</p>` +
       `<div class="field"><input type="number" id="tradeQty" inputmode="numeric" min="1" step="10" placeholder="股數" aria-label="股數"></div>` +
-      `<div class="row"><button class="btn small" type="button" data-act="qtyFill" data-v="10">10 股</button><button class="btn small" type="button" data-act="qtyFill" data-v="50">50 股</button><button class="btn small" type="button" data-act="qtyFill" data-v="100">100 股</button><button class="btn small" type="button" data-act="qtyFill" data-v="max">買到最多</button><button class="btn small" type="button" data-act="qtyFill" data-v="all">全部持股</button></div>` +
+      `<div class="row"><button class="btn small" type="button" data-act="qtyFill" data-v="10">10 股</button><button class="btn small" type="button" data-act="qtyFill" data-v="50">50 股</button><button class="btn small" type="button" data-act="qtyFill" data-v="100">100 股</button><button class="btn small" type="button" data-act="qtyFill" data-v="max">買到最多</button><button class="btn small" type="button" data-act="qtyFill" data-v="all">${sh ? '全部空單' : '全部持股'}</button></div>` +
       `<p class="dnote" id="tradeNote" aria-live="polite"></p>` +
-      `<div class="foot"><button class="btn gold" type="button" data-act="tradeDo" data-v="buy" data-k="${k}"${ok ? '' : ' disabled'} data-focus>買進</button><button class="btn" type="button" data-act="tradeDo" data-v="sell" data-k="${k}"${ok && held ? '' : ' disabled'}>賣出</button></div>` +
+      `<div class="foot"><button class="btn gold" type="button" data-act="tradeDo" data-v="buy" data-k="${k}"${ok && !sh ? '' : ' disabled'} data-focus>買進</button><button class="btn" type="button" data-act="tradeDo" data-v="sell" data-k="${k}"${ok && held ? '' : ' disabled'}>賣出</button></div>` +
+      `<div class="foot shortrow"><button class="btn" type="button" data-act="tradeDo" data-v="short" data-k="${k}"${ok && !held ? '' : ' disabled'}>做空</button><button class="btn" type="button" data-act="tradeDo" data-v="cover" data-k="${k}"${ok && sh ? '' : ' disabled'}>回補</button></div>` +
+      `<p class="hint">做空是看跌：先押一筆和股價等值的保證金，股價跌多少就賺多少；漲到做空均價的兩倍會被強制回補，保證金賠光。同一檔股票不能同時持有和做空。</p>` +
       (ok ? '' : `<p class="hint">${!myTurn() ? '輪到你的時候才能買賣。' : s.ph === 'shop' ? '先離開卡片屋，才能買賣股票。' : ''}</p>`);
   }
 
@@ -3787,7 +3912,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
         const inp = $('#tradeQty');
         if (!inp || !P || k == null) return;
         if (d.v === 'max') inp.value = Math.max(0, Math.floor(P.cash / (s.stk[k].p * 1.011) / 10) * 10);
-        else if (d.v === 'all') inp.value = P.stk[k];
+        else if (d.v === 'all') inp.value = P.stk[k] || E.shortOf(P, k);
         else inp.value = d.v;
         dlgNotes();
         return;
@@ -3795,7 +3920,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = ART;
       case 'tradeDo': {
         const v = parseInt(($('#tradeQty') || {}).value || '0', 10);
         if (!(v > 0)) { toast('請輸入股數', 'bad'); return; }
-        submit({ t: 'stk', i: +d.k, qty: d.v === 'buy' ? v : -v });
+        if (d.v === 'short' || d.v === 'cover') submit({ t: 'short', i: +d.k, qty: d.v === 'short' ? v : -v });
+        else submit({ t: 'stk', i: +d.k, qty: d.v === 'buy' ? v : -v });
         return;
       }
       case 'resign':
